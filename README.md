@@ -1,0 +1,2 @@
+# BetterResults
+The Result Pattern
