@@ -1,2 +1,2 @@
-# BetterResults
+# BetterResult
 The Result Pattern
