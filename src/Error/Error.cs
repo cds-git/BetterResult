@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public readonly record struct Error
+public readonly partial record struct Error
 {
     private Error(ErrorType type, string code, string description, Dictionary<string, object>? metadata)
     {

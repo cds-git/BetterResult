@@ -3,7 +3,8 @@ namespace BetterResult;
 public readonly partial record struct Result<TValue>
 {
     private readonly TValue? _value;
-    private readonly Error? _error;
+    private readonly Error _error;
+    private readonly bool _isSuccess;
 
     private Result(TValue value)
     {
@@ -12,24 +13,23 @@ public readonly partial record struct Result<TValue>
             ArgumentNullException.ThrowIfNull(value);
         }
 
+        _isSuccess = true;
         _value = value;
-        _error = null;
+        _error = default;
     }
 
     private Result(Error error)
     {
-        if (error is null)
-        {
-            ArgumentNullException.ThrowIfNull(error);
-        }
-
+        _isSuccess = false;
         _value = default;
         _error = error;
     }
 
-    public bool IsSuccess => !IsFailure;
+    public bool IsSuccess => _isSuccess;
 
-    public bool IsFailure => _error is not null;
+    public bool IsFailure => !_isSuccess;
+
+    public Error Error => _error;
 
     public TValue Value
     {
@@ -43,20 +43,6 @@ public readonly partial record struct Result<TValue>
             return _value;
         }
     }
-
-    public Error Error
-    {
-        get
-        {
-            if (_error is null)
-            {
-                throw new InvalidOperationException();
-            }
-
-            return _error;
-        }
-    }
-
 
     public static Result<TValue> Success(TValue value) => new(value);
     public static Result<TValue> Failure(Error error) => new(error);
