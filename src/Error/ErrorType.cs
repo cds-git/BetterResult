@@ -2,12 +2,11 @@ namespace BetterResult;
 
 public enum ErrorType
 {
-    None,
-    Failure,
     Unexpected,
+    Failure,
     Validation,
     Conflict,
     NotFound,
     Unauthorized,
-    Forbidden
+    Forbidden,
 }
