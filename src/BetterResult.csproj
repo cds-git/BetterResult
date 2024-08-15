@@ -9,7 +9,7 @@
 
     <PropertyGroup>
         <PackageId>BetterResult</PackageId>
-        <Version>0.1.0</Version>
+        <Version>0.2.0</Version>
         <Authors>cds</Authors>
         <PackageTags>Result,Results,BetterResult,Error,Handling</PackageTags>
         <Description>Implementation of the result pattern</Description>
