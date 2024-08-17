@@ -3,7 +3,7 @@ namespace BetterResult;
 public readonly partial record struct Result<TValue>
 {
     private readonly TValue? _value;
-    private readonly Error _error;
+    private readonly Error? _error;
     private readonly bool _isSuccess;
 
     private Result(TValue value)
@@ -15,7 +15,7 @@ public readonly partial record struct Result<TValue>
 
         _isSuccess = true;
         _value = value;
-        _error = default;
+        _error = null;
     }
 
     private Result(Error error)
@@ -29,21 +29,18 @@ public readonly partial record struct Result<TValue>
 
     public bool IsFailure => !_isSuccess;
 
-    public Error Error => _error;
+    public Error Error => IsFailure ? (Error)_error! : throw new InvalidOperationException();
 
     public TValue Value
     {
         get
         {
-            if (_value is null)
+            if (IsFailure)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Cannot access the value when result is of type failure");
             }
 
-            return _value;
+            return _value!;
         }
     }
-
-    public static Result<TValue> Success(TValue value) => new(value);
-    public static Result<TValue> Failure(Error error) => new(error);
 }

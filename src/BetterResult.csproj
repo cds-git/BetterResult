@@ -1,28 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <NoWarn>CS1591</NoWarn>
-    </PropertyGroup>
+  <PropertyGroup>
+    <NoWarn>CS1591</NoWarn>
+    <IsPackable>true</IsPackable>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <PackageId>BetterResult</PackageId>
-        <Version>0.2.0</Version>
-        <Authors>cds</Authors>
-        <PackageTags>Result,Results,BetterResult,Error,Handling</PackageTags>
-        <Description>Implementation of the result pattern</Description>
-        <PackageProjectUrl>https://github.com/cds-git/BetterResult</PackageProjectUrl>
-        <RepositoryType>git</RepositoryType>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <RepositoryUrl>https://github.com/cds-git/BetterResult</RepositoryUrl>
-        <PackageOutputPath>../artifacts/</PackageOutputPath>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-    </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>BetterResult</PackageId>
+    <Version>0.3.0</Version>
+    <Authors>cds</Authors>
+    <PackageTags>Result,Results,BetterResult,Error,Handling</PackageTags>
+    <Description>Implementation of the result pattern</Description>
+    <PackageProjectUrl>https://github.com/cds-git/BetterResult</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/cds-git/BetterResult</RepositoryUrl>
+    <PackageOutputPath>../artifacts/</PackageOutputPath>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <None Include="../README.md" Pack="true" PackagePath="" />
-    </ItemGroup>
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
 </Project>

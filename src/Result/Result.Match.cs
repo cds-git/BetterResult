@@ -2,18 +2,23 @@ namespace BetterResult;
 
 public readonly partial record struct Result<TValue>
 {
-    public TResult Match<TResult>(Func<TValue, TResult> success, Func<Error, TResult> failure)
+    public TResult Match<TResult>(Func<TValue, TResult> onSuccess, Func<Error, TResult> onFailure)
     {
-        return IsSuccess ? success(Value) : failure(Error);
-    }
-
-    public async Task<TResult> MatchAsync<TResult>(Func<TValue, Task<TResult>> success, Func<Error, Task<TResult>> failure)
-    {
-        if (IsSuccess)
+        if (IsFailure)
         {
-            return await success(Value).ConfigureAwait(false);
+            return onFailure(Error);
         }
 
-        return await failure(Error).ConfigureAwait(false);
+        return onSuccess(Value);
+    }
+
+    public async Task<TResult> MatchAsync<TResult>(Func<TValue, Task<TResult>> onSuccess, Func<Error, Task<TResult>> onFailure)
+    {
+        if (IsFailure)
+        {
+            return await onFailure(Error).ConfigureAwait(false);
+        }
+
+        return await onSuccess(Value).ConfigureAwait(false);
     }
 }
