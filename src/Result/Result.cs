@@ -1,46 +1,40 @@
 namespace BetterResult;
 
-public readonly partial record struct Result<TValue>
+public readonly partial record struct Result
 {
-    private readonly TValue? _value;
-    private readonly Error? _error;
     private readonly bool _isSuccess;
-
-    private Result(TValue value)
-    {
-        if (value is null)
-        {
-            ArgumentNullException.ThrowIfNull(value);
-        }
-
-        _isSuccess = true;
-        _value = value;
-        _error = null;
-    }
+    private readonly Error? _error;
 
     private Result(Error error)
     {
         _isSuccess = false;
-        _value = default;
         _error = error;
     }
 
-    public bool IsSuccess => _isSuccess;
+    private Result(bool isSuccess)
+    {
+        if (isSuccess is false)
+        {
+            throw new InvalidOperationException();
+        }
 
+        _isSuccess = true;
+        _error = null;
+    }
+
+    public bool IsSuccess => _isSuccess;
     public bool IsFailure => !_isSuccess;
 
-    public Error Error => IsFailure ? (Error)_error! : throw new InvalidOperationException();
-
-    public TValue Value
+    public Error Error
     {
         get
         {
-            if (IsFailure)
+            if (_error is null)
             {
-                throw new InvalidOperationException("Cannot access the value when result is of type failure");
+                throw new InvalidOperationException("Cannot access Error when result is of success");
             }
 
-            return _value!;
+            return (Error)_error;
         }
     }
 }

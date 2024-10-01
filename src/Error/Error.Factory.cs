@@ -27,10 +27,10 @@ public readonly partial record struct Error
             new(ErrorType.Conflict, code, description, metadata);
 
     public static Error Failure(
-           string code = "General.Failure",
-           string description = "Failure",
-           Dictionary<string, object>? metadata = null) =>
-               new(ErrorType.Failure, code, description, metadata);
+       string code = "General.Failure",
+       string description = "Failure",
+       Dictionary<string, object>? metadata = null) =>
+           new(ErrorType.Failure, code, description, metadata);
 
     public static Error Unauthorized(
         string code = "General.Unauthorized",
@@ -42,11 +42,18 @@ public readonly partial record struct Error
         string code = "General.Forbidden",
         string description = "Forbidden",
         Dictionary<string, object>? metadata = null) =>
-        new(ErrorType.Forbidden, code, description, metadata);
+            new(ErrorType.Forbidden, code, description, metadata);
 
     public static Error Unavailable(
         string code = "General.Unavailable",
         string description = "The requested service was unavailable",
         Dictionary<string, object>? metadata = null) =>
-        new(ErrorType.Unavailable, code, description, metadata);
+            new(ErrorType.Unavailable, code, description, metadata);
+    
+    public static Error Custom(
+        ErrorType type,
+        string code = "General.Custom",
+        string description = "Custom error occurred",
+        Dictionary<string, object>? metadata = null) =>
+            new(type, code, description, metadata);
 }
