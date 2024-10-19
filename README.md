@@ -1,7 +1,7 @@
 # BetterResult
 
 [![NuGet](https://img.shields.io/nuget/v/BetterResult.svg)](https://www.nuget.org/packages/BetterResult)
-[![Build Status](https://github.com/cds-git/BetterResult/workflows/tests/badge.svg)](https://github.com/cds-git/BetterResult/actions)
+[![BuildStatus](https://github.com/cds-git/BetterResult/actions/workflows/dotnet.yml/badge.svg)](https://github.com/cds-git/BetterResult/actions/workflows/dotnet.yml)
 
 **BetterResult** helps to streamline your code by providing a simple yet powerful way to handle success and failure states without exceptions, offering a clear, functional approach to error handling. With rich error metadata, it also allows you to extend and trace errors efficiently through your application layers.
 
