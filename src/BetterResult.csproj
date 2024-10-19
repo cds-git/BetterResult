@@ -8,10 +8,10 @@
 
   <PropertyGroup>
     <PackageId>BetterResult</PackageId>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <Authors>cds</Authors>
     <PackageTags>Result,Results,BetterResult,Error,Handling</PackageTags>
-    <Description>Implementation of the result pattern</Description>
+    <Description>Implementation of The Result Pattern</Description>
     <PackageProjectUrl>https://github.com/cds-git/BetterResult</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

@@ -1,12 +1,15 @@
 namespace BetterResult;
 
+/// <summary>
+/// Error types.
+/// </summary>
 public enum ErrorType
 {
+    Failure,
     Unexpected,
     Validation,
     NotFound,
     Conflict,
-    Failure,
     Unauthorized,
     Forbidden,
     Unavailable
