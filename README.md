@@ -269,6 +269,8 @@ var userId = finalError.GetMetadataByType<int>();
 
 ## Credits - Inspiration
 
-[ErrorOr](https://github.com/amantinband/error-or)
-[OneOf](https://github.com/mcintyre321/OneOf)
+- [Gui Ferreira](https://www.youtube.com/watch?v=C_u1WottRA0)
+- [Milan Jovanović](https://www.youtube.com/watch?v=WCCkEe_Hy2Y)
+- [ErrorOr](https://github.com/amantinband/error-or)
+- [OneOf](https://github.com/mcintyre321/OneOf)
 
