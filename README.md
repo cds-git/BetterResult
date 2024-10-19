@@ -4,7 +4,6 @@ Just my personal implementation of the result pattern to get better understandin
 ## TODO:
 - Add example usage to README
 - Add extensive testing
-- Add existing operations to the base result class
 - Add helper methods for interacting with metadata in erorrs
     - Add, Remove, Override, Extract by type
         - WithMetadata, WithMessage, `T? TryGet<T>()`

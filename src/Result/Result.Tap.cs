@@ -1,9 +1,49 @@
 namespace BetterResult;
 
+public readonly partial record struct Result
+{
+    /// <summary>
+    /// Executes a side-effect action on the current <see cref="Result"/> if it represents a success, 
+    /// without modifying the result. If the result is a failure, the action is not invoked.
+    /// </summary>
+    /// <param name="onSuccess">The action to execute if the current result is a success.</param>
+    /// <returns>The original <see cref="Result"/>, preserving its success or failure state.</returns>
+    public Result Tap(Action onSuccess)
+    {
+        if (IsFailure)
+        {
+            return Error;
+        }
+
+        onSuccess();
+
+        return this;
+    }
+
+    /// <summary>
+    /// Asynchronously executes a side-effect action on the current <see cref="Result"/> if it represents a success, 
+    /// without modifying the result. If the result is a failure, the action is not invoked.
+    /// </summary>
+    /// <param name="onSuccess">The asynchronous action to execute if the current result is a success.</param>
+    /// <returns>A task representing the asynchronous operation that yields the original <see cref="Result"/>, 
+    /// preserving its success or failure state.</returns>
+    public async Task<Result> TapAsync(Func<Task> onSuccess)
+    {
+        if (IsFailure)
+        {
+            return Error;
+        }
+
+        await onSuccess().ConfigureAwait(false);
+
+        return this;
+    }
+}
+
 public readonly partial record struct Result<TValue>
 {
     /// <summary>
-    /// Executes a side effect action on the current <see cref="Result{TValue}"/> if it represents a success, 
+    /// Executes a side-effect action on the current <see cref="Result{TValue}"/> if it represents a success, 
     /// without modifying the result. If the result is a failure, the action is not invoked.
     /// </summary>
     /// <param name="onSuccess">The action to execute if the current result is a success.</param>
@@ -21,7 +61,7 @@ public readonly partial record struct Result<TValue>
     }
 
     /// <summary>
-    /// Asynchronously executes a side effect action on the current <see cref="Result{TValue}"/> if it represents a success, 
+    /// Asynchronously executes a side-effect action on the current <see cref="Result{TValue}"/> if it represents a success, 
     /// without modifying the result. If the result is a failure, the action is not invoked.
     /// </summary>
     /// <param name="onSuccess">The asynchronous action to execute if the current result is a success.</param>
