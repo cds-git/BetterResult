@@ -82,6 +82,28 @@ public class ResultFactoryTests
         act.Should().Throw<InvalidOperationException>().WithMessage("Cannot access the value when result is of type failure. Check IsFailure before accessing value!");
     }
 
+   [Fact]
+    public void AccessingValue_Should_ReturnSuccessResult_When_ValueIsValid()
+    {
+        // Act
+        var result = Result.Success<int>(1);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(1);
+    }
+
+   [Fact]
+    public void AccessingValue_Should_ReturnSuccessResult_When_ValueIsNullable()
+    {
+        // Act
+        var result = Result.Success<int?>(null);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeNull();
+    }
+
     [Fact]
     public void AccessingError_Should_ThrowException_When_ResultWithValueIsSuccess()
     {
