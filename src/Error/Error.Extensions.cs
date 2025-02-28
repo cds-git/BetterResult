@@ -46,7 +46,7 @@ public static class ErrorExtensions
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata<T>(this Error error, string key, T metadata)
     {
-        if (metadata is null) ArgumentNullException.ThrowIfNull(metadata);
+        if (metadata is null) throw new ArgumentNullException(nameof(metadata));
 
         var mergedMetadata = error.Metadata ?? [];
 
