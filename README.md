@@ -120,21 +120,21 @@ else
 
 This separation of `Result<TValue>` and `Result` makes it easy to handle both value-returning and void-like operations in a consistent, functional manner.
 
-### Bind
+### Then
 
-`Bind` is used to chain operations that return a `Result`. If the current result is a success, the provided function is invoked, and the next result is returned. If the result is a failure, it propagates the error without invoking the function.
+`Then` is used to chain operations that return a `Result`. If the current result is a success, the provided function is invoked, and the next result is returned. If the result is a failure, it propagates the error without invoking the function.
 
 ```csharp
 var result = Result.Success(42);
 
-var finalResult = result.Bind(value => Result.Success(value * 2));  // Result: Success(84)
+var finalResult = result.Then(value => Result.Success(value * 2));  // Result: Success(84)
 
-var failureResult = result.Bind(value => Result.Failure<int>(Error.Failure("E002", "Calculation failed")));  // Result: Failure
+var failureResult = result.Then(value => Result.Failure<int>(Error.Failure("E002", "Calculation failed")));  // Result: Failure
 ```
 
 #### Async Version
 ```csharp
-var finalResult = await result.BindAsync(value => Task.FromResult(Result.Success(value * 2)));
+var finalResult = await result.ThenAsync(value => Task.FromResult(Result.Success(value * 2)));
 ```
 
 ### Match
