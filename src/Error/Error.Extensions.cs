@@ -24,11 +24,11 @@ public static class ErrorExtensions
     /// <param name="error">The current error.</param>
     /// <param name="metadata">The new metadata to merge with the existing metadata.</param>
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
-    public static Error WithMetadata(this Error error, Dictionary<string, object> metadata)
+    public static Error WithMetadata(this Error error, Dictionary<string, object>? metadata)
     {
         var mergedMetadata = error.Metadata ?? [];
 
-        foreach (var kvp in metadata)
+        foreach (var kvp in metadata ?? [])
         {
             mergedMetadata[kvp.Key] = kvp.Value;  // Override existing keys
         }
@@ -44,13 +44,12 @@ public static class ErrorExtensions
     /// <param name="metadata">The metadata value to add or update.</param>
     /// <typeparam name="T">The type of the metadata value.</typeparam>
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
-    public static Error WithMetadata<T>(this Error error, string key, T metadata)
+    public static Error WithMetadata<T>(this Error error, string key, T? metadata)
     {
-        if (metadata is null) throw new ArgumentNullException(nameof(metadata));
-
         var mergedMetadata = error.Metadata ?? [];
 
-        mergedMetadata[key] = metadata; // Override existing keys
+        if (metadata is not null)
+            mergedMetadata[key] = metadata; // Override existing keys
 
         return Error.Create(error.Type, error.Code, error.Message, mergedMetadata);
     }
@@ -62,9 +61,10 @@ public static class ErrorExtensions
     /// <param name="metadata">The metadata value to add or update.</param>
     /// <typeparam name="T">The type of the metadata value.</typeparam>
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
-    public static Error WithMetadata<T>(this Error error, T metadata)
+    public static Error WithMetadata<T>(this Error error, T? metadata)
     {
-        string key = typeof(T).Name;
-        return error.WithMetadata(key, metadata);
+        return metadata is not null
+            ? error.WithMetadata(typeof(T).Name, metadata)
+            : error;
     }
 }

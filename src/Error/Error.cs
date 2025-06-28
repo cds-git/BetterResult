@@ -34,39 +34,41 @@ public readonly partial record struct Error
     public Dictionary<string, object>? Metadata { get; }
 
     /// <summary>
-    /// Retrieves the metadata associated with the specified key.
+    /// Retrieves the metadata value associated with the given key, or returns <c>default(T)</c> if the key is not present.
     /// </summary>
-    /// <typeparam name="T">The type of the metadata value.</typeparam>
-    /// <param name="key">The key associated with the metadata.</param>
-    /// <returns>The metadata value associated with the key, or throws an exception if the key is not found or type mismatched.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if the key does not exist in the metadata.</exception>
-    /// <exception cref="InvalidCastException">Thrown if the metadata cannot be cast to the specified type.</exception>
-    public T GetMetadataByKey<T>(string key)
+    /// <typeparam name="T">The expected type of the metadata value.</typeparam>
+    /// <param name="key">The key of the metadata entry to retrieve.</param>
+    /// <returns>
+    /// The metadata value cast to <typeparamref name="T"/>, or <c>default(T)</c> if the metadata dictionary is <c>null</c> or the key does not exist.
+    /// </returns>
+    /// <exception cref="InvalidCastException">
+    /// Thrown if the metadata value exists but cannot be cast to <typeparamref name="T"/>.
+    /// </exception>
+    public T? GetMetadata<T>(string key)
     {
         if (Metadata is null || !Metadata.TryGetValue(key, out var value))
         {
-            throw new KeyNotFoundException($"The key '{key}' was not found in the metadata.");
+            return default;
         }
 
-        if (value is T typedValue)
-        {
-            return typedValue;
-        }
-
-        throw new InvalidCastException($"The metadata for key '{key}' is not of type {typeof(T).Name}.");
+        return value is T typedValue
+            ? typedValue
+            : throw new InvalidCastException($"The metadata for key '{key}' is not of type {typeof(T).Name}.");
     }
 
     /// <summary>
-    /// Retrieves the first metadata value that matches the specified type.
+    /// Retrieves the first metadata value that can be cast to the specified type, or returns <c>default(T)</c> if none is found.
     /// </summary>
-    /// <typeparam name="T">The type of the metadata value.</typeparam>
-    /// <returns>The first metadata value of the specified type, or throws an exception if no such value is found.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if no metadata of the specified type is found.</exception>
-    public T GetMetadataByType<T>()
+    /// <typeparam name="T">The type of the metadata value to search for.</typeparam>
+    /// <returns>
+    /// The first metadata value cast to <typeparamref name="T"/>, 
+    /// or <c>default(T)</c> if the metadata dictionary is <c>null</c> or contains no entries of the requested type.
+    /// </returns>
+    public T? GetMetadata<T>()
     {
         if (Metadata is null)
         {
-            throw new KeyNotFoundException($"No metadata found of type {typeof(T).Name}.");
+            return default;
         }
 
         foreach (var entry in Metadata.Values)
@@ -77,6 +79,6 @@ public readonly partial record struct Error
             }
         }
 
-        throw new KeyNotFoundException($"No metadata found of type {typeof(T).Name}.");
+        return default;
     }
 }
