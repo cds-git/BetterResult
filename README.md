@@ -104,7 +104,7 @@ if (result.IsSuccess)
 }
 else
 {
-    Console.WriteLine($"Failure. Error: {result.Error.Description}");
+    Console.WriteLine($"Failure. Error: {result.Error.Message}");
 }
 ```
 
@@ -132,7 +132,7 @@ The base `Result` type is ideal for operations that do not return a value (simil
 
    if (operationResult.IsFailure)
    {
-       Console.WriteLine($"Operation failed: {operationResult.Error.Description}");
+       Console.WriteLine($"Operation failed: {operationResult.Error.Message}");
    }
    else
    {
@@ -154,7 +154,7 @@ var result = Result.Success(42);
 
 var message = result.Match(
     onSuccess: value => $"Success with value {value}",
-    onFailure: error => $"Failure: {error.Description}"
+    onFailure: error => $"Failure: {error.Message}"
 );
 
 Console.WriteLine(message);  // Output: Success with value 42
@@ -164,7 +164,7 @@ Console.WriteLine(message);  // Output: Success with value 42
 ```csharp
 var message = await result.MatchAsync(
     onSuccess: value => Task.FromResult($"Success with value {value}"),
-    onFailure: error => Task.FromResult($"Failure: {error.Description}")
+    onFailure: error => Task.FromResult($"Failure: {error.Message}")
 );
 ```
 
@@ -176,7 +176,7 @@ var result = Result.Success(42);
 
 result.Switch(
     onSuccess: value => Console.WriteLine($"Success with value {value}"),
-    onFailure: error => Console.WriteLine($"Failure: {error.Description}")
+    onFailure: error => Console.WriteLine($"Failure: {error.Message}")
 );
 ```
 
@@ -184,7 +184,7 @@ result.Switch(
 ```csharp
 await result.SwitchAsync(
     onSuccess: value => Task.Run(() => Console.WriteLine($"Success with value {value}")),
-    onFailure: error => Task.Run(() => Console.WriteLine($"Failure: {error.Description}"))
+    onFailure: error => Task.Run(() => Console.WriteLine($"Failure: {error.Message}"))
 );
 ```
 
@@ -312,7 +312,6 @@ var userId = finalError.GetMetadataByType<int>();
 - Add ToError extension method on Exceptions
 - Rename methods to make more sense for a functional style
 - Update GetMetadata methods to return null rather than throw exceptions
-- Rename Error.Description to Error.Message
 
 ---
 

@@ -6,13 +6,13 @@ public class ErrorTests
     public void WithMessage_Should_PrependNewMessage_When_MessageIsProvided()
     {
         // Arrange
-        var error = Error.Failure("E001", "Original error description");
+        var error = Error.Failure("E001", "Original error message");
 
         // Act
         var updatedError = error.WithMessage("New error detail");
 
         // Assert
-        updatedError.Description.Should().Be("New error detail: Original error description");
+        updatedError.Message.Should().Be("New error detail: Original error message");
         updatedError.Code.Should().Be(error.Code);
         updatedError.Type.Should().Be(error.Type);
         updatedError.Metadata.Should().BeNull();

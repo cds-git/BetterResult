@@ -11,7 +11,7 @@ public class MatchTests
         // Act
         var output = result.Match(
             onSuccess: () => "Success",
-            onFailure: error => $"Error: {error.Description}"
+            onFailure: error => $"Error: {error.Message}"
         );
 
         // Assert
@@ -28,11 +28,11 @@ public class MatchTests
         // Act
         var output = result.Match(
             onSuccess: () => "Success",
-            onFailure: err => $"Error: {err.Description}"
+            onFailure: err => $"Error: {err.Message}"
         );
 
         // Assert
-        output.Should().Be($"Error: {error.Description}");
+        output.Should().Be($"Error: {error.Message}");
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class MatchTests
         // Act
         var output = await result.MatchAsync(
             onSuccess: () => Task.FromResult("Success"),
-            onFailure: error => Task.FromResult($"Error: {error.Description}")
+            onFailure: error => Task.FromResult($"Error: {error.Message}")
         );
 
         // Assert
@@ -61,11 +61,11 @@ public class MatchTests
         // Act
         var output = await result.MatchAsync(
             onSuccess: () => Task.FromResult("Success"),
-            onFailure: err => Task.FromResult($"Error: {err.Description}")
+            onFailure: err => Task.FromResult($"Error: {err.Message}")
         );
 
         // Assert
-        output.Should().Be($"Error: {error.Description}");
+        output.Should().Be($"Error: {error.Message}");
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class MatchTests
         // Act
         var output = result.Match(
             onSuccess: value => $"Value is {value}",
-            onFailure: error => $"Error: {error.Description}"
+            onFailure: error => $"Error: {error.Message}"
         );
 
         // Assert
@@ -94,11 +94,11 @@ public class MatchTests
         // Act
         var output = result.Match(
             onSuccess: value => $"Value is {value}",
-            onFailure: err => $"Error: {err.Description}"
+            onFailure: err => $"Error: {err.Message}"
         );
 
         // Assert
-        output.Should().Be($"Error: {error.Description}");
+        output.Should().Be($"Error: {error.Message}");
     }
 
     [Fact]
@@ -127,10 +127,10 @@ public class MatchTests
         // Act
         var output = await result.MatchAsync(
             onSuccess: value => Task.FromResult($"Value is {value}"),
-            onFailure: err => Task.FromResult($"Error: {err.Description}")
+            onFailure: err => Task.FromResult($"Error: {err.Message}")
         );
 
         // Assert
-        output.Should().Be($"Error: {error.Description}");
+        output.Should().Be($"Error: {error.Message}");
     }
 }

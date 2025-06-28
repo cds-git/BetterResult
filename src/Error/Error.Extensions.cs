@@ -13,8 +13,8 @@ public static class ErrorExtensions
     /// <returns>A new <see cref="Error"/> with the updated message.</returns>
     public static Error WithMessage(this Error error, string message)
     {
-        string newDescription = $"{message}: {error.Description}";
-        return Error.Custom(error.Type, error.Code, newDescription, error.Metadata);
+        string newDescription = $"{message}: {error.Message}";
+        return Error.Create(error.Type, error.Code, newDescription, error.Metadata);
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public static class ErrorExtensions
             mergedMetadata[kvp.Key] = kvp.Value;  // Override existing keys
         }
 
-        return Error.Custom(error.Type, error.Code, error.Description, mergedMetadata);
+        return Error.Create(error.Type, error.Code, error.Message, mergedMetadata);
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ public static class ErrorExtensions
 
         mergedMetadata[key] = metadata; // Override existing keys
 
-        return Error.Custom(error.Type, error.Code, error.Description, mergedMetadata);
+        return Error.Create(error.Type, error.Code, error.Message, mergedMetadata);
     }
 
     /// <summary>

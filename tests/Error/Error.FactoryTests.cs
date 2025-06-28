@@ -10,7 +10,8 @@ public class ErrorFactoryTests
 
         // Assert
         error.Code.Should().Be("E001");
-        error.Description.Should().Be("Some failure occurred");
+        error.Message.Should().Be("Some failure occurred");
+
         error.Type.Should().Be(ErrorType.Failure);
         error.Metadata.Should().BeNull();
     }
@@ -23,7 +24,7 @@ public class ErrorFactoryTests
 
         // Assert
         error.Code.Should().Be("E002");
-        error.Description.Should().Be("Unexpected error");
+        error.Message.Should().Be("Unexpected error");
         error.Type.Should().Be(ErrorType.Unexpected);
         error.Metadata.Should().BeNull();
     }
@@ -36,7 +37,7 @@ public class ErrorFactoryTests
 
         // Assert
         error.Code.Should().Be("E003");
-        error.Description.Should().Be("Validation error");
+        error.Message.Should().Be("Validation error");
         error.Type.Should().Be(ErrorType.Validation);
         error.Metadata.Should().BeNull();
     }
@@ -45,11 +46,11 @@ public class ErrorFactoryTests
     public void Custom_Should_CreateError_WithCorrectProperties()
     {
         // Act
-        var error = Error.Custom(ErrorType.Failure, "CustomCode", "Custom description");
+        var error = Error.Create(ErrorType.Failure, "CustomCode", "Custom description");
 
         // Assert
         error.Code.Should().Be("CustomCode");
-        error.Description.Should().Be("Custom description");
+        error.Message.Should().Be("Custom description");
         error.Type.Should().Be(ErrorType.Failure);
         error.Metadata.Should().BeNull();
     }

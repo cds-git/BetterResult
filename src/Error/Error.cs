@@ -5,11 +5,11 @@ namespace BetterResult;
 /// </summary>
 public readonly partial record struct Error
 {
-    private Error(ErrorType type, string code, string description, Dictionary<string, object>? metadata)
+    private Error(ErrorType type, string code, string message, Dictionary<string, object>? metadata)
     {
         Type = type;
         Code = code;
-        Description = description;
+        Message = message;
         Metadata = metadata;
     }
 
@@ -19,9 +19,9 @@ public readonly partial record struct Error
     public string Code { get; }
 
     /// <summary>
-    /// Gets the error description.
+    /// Gets the error message.
     /// </summary>
-    public string Description { get; }
+    public string Message { get; }
 
     /// <summary>
     /// Gets the error type.
