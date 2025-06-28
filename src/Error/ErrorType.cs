@@ -1,47 +1,47 @@
 namespace BetterResult;
 
 /// <summary>
-/// Error types.
+/// Represents the broad categories of errors that an operation can produce.
 /// </summary>
 public enum ErrorType
 {
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.Failure"/>
+    /// A general, expected failure (for example, a business‐rule violation).
     /// </summary>
     Failure,
 
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.Unexpected"/>
+    /// An unexpected internal error (for example, a null reference or system exception).
     /// </summary>
     Unexpected,
 
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.Validation"/>
+    /// One or more inputs did not pass validation rules.
     /// </summary>
     Validation,
 
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.NotFound"/>
+    /// The requested resource could not be found.
     /// </summary>
     NotFound,
 
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.Conflict"/>
+    /// The operation conflicts with the current state of the resource (for example, a version mismatch).
     /// </summary>
     Conflict,
 
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.Unauthorized"/>
+    /// The caller is either not authenticated or does not have the required permission.
     /// </summary>
     Unauthorized,
 
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.Forbidden"/>
+    /// A dependent service or subsystem is currently unavailable (typically a transient condition).
     /// </summary>
-    Forbidden,
+    Unavailable,
 
     /// <summary>
-    /// Indicates that error was of type <see cref="ErrorType.Unavailable"/>
+    /// The operation did not complete within the allotted time.
     /// </summary>
-    Unavailable
+    Timeout 
 }

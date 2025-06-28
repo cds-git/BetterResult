@@ -308,11 +308,11 @@ var userId = finalError.GetMetadataByType<int>();
 
 ## TODO
 
-- Add Timeout to error types
 - Refactor implementation to be more modern and functional style
 - Add ToError extension method on Exceptions
 - Rename methods to make more sense for a functional style
 - Update GetMetadata methods to return null rather than throw exceptions
+- Rename Error.Description to Error.Message
 
 ---
 
