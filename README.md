@@ -8,28 +8,19 @@
 
 ## Table of Contents
 
-- [Installation](#installation)
-  - [NuGet Package Manager](#nuget-package-manager)
-  - [.NET CLI](#net-cli)
-  - [Package Reference](#package-reference)
-- [Why Use The Result Pattern?](#why-use-the-result-pattern)
-- [Usage](#usage)
-  - [Basic Usage](#basic-usage)
-    - [`Result<TValue>`](#resulttvalue)
-    - [Accessing Values and Errors](#accessing-values-and-errors)
-    - [`Result` (Base Result)](#result-base-result)
-  - [Methods](#methods)
-    - [Match](#match)
-    - [Switch](#switch)
-    - [Then](#then)
-    - [Else](#else)
-    - [Tap](#tap)
-    - [TryCatch](#trycatch)
-- [Creating and Extending Errors](#creating-and-extending-errors)
-  - [Creating an Error](#creating-an-error)
-  - [Extending the Error](#extending-the-error)
-  - [Retrieving Metadata](#retrieving-metadata)
-- [Credits - Inspiration](#credits---inspiration)
+* [Installation](#installation)
+* [Why Use The Result Pattern?](#why-use-the-result-pattern)
+* [Usage](#usage)
+* [Methods](#methods)
+
+  * [Bind](#bind)
+  * [Do](#do)
+  * [Map](#map)
+  * [MapError](#maperror)
+  * [Match](#match)
+* [Error Type](#error-type)
+* [TODO](#todo)
+* [Credits - Inspiration](#credits---inspiration)
 
 ---
 
@@ -70,254 +61,220 @@ Overall, the Result Pattern encourages disciplined error management, ensuring th
 ---
 
 ## Usage
-
 ### Basic Usage
 
 #### `Result<TValue>`
-`Result<TValue>` represents either a successful outcome carrying a value of type `TValue` or a failure carrying an `Error`. You can create `Result<TValue>` either by implicit casting or via factory methods.
 
-1. **Using Implicit Casting:**
-   ```csharp
-   // Implicitly cast a value to a success result
-   Result<int> result = 42;
+Represents either a successful outcome carrying a value of type `TValue` or a failure carrying an `Error`. 
+You can create instances by implicit casting or factory methods:
 
-   // Implicitly cast an Error to a failure result
-   Result<int> result = Error.Failure("E001", "Some error occurred");
-   ```
+```csharp
+Result<int> success = 42;
+Result<int> failure = Error.Failure("E001", "An error occurred");
 
-2. **Using Factory Methods:**
-   ```csharp
-   // Create an explicit success result
-   var result = Result.Success(42);
-
-   // Create an explicit failure result
-   var result = Error.Failure("E001", "Some error occurred");
-   ```
+var explicitSuccess = Result.Success(100);
+var explicitFailure = Result.Failure<int>(Error.Failure("E002", "Something went wrong"));
+```
 
 #### Accessing Values and Errors
-After obtaining a result, you can check its state and access the success value or error details accordingly:
 
 ```csharp
 if (result.IsSuccess)
 {
-    Console.WriteLine($"Success! Value: {result.Value}");
+    Console.WriteLine($"Value: {result.Value}");
 }
 else
 {
-    Console.WriteLine($"Failure. Error: {result.Error.Message}");
+    Console.WriteLine($"Error: {result.Error.Message}");
 }
 ```
 
-#### `Result` (Base Result)
-The base `Result` type is ideal for operations that do not return a value (similar to `void`), but still indicate success or failure.
+#### `Result` (No Value)
 
-1. **Using Factory Methods:**
-   ```csharp
-   public Result SomeOperation()
-   {
-       if (someCondition)
-       {
-           return Result.Success();  // Success with no value
-       }
-       else
-       {
-           return Result.Failure(Error.Failure("E002", "An error occurred"));
-       }
-   }
-   ```
-
-2. **Accessing the Error:**
-   ```csharp
-   var operationResult = SomeOperation();
-
-   if (operationResult.IsFailure)
-   {
-       Console.WriteLine($"Operation failed: {operationResult.Error.Message}");
-   }
-   else
-   {
-       Console.WriteLine("Operation succeeded!");
-   }
-   ```
-
----
-
-### Methods
-
-These methods allow you to compose operations in a functional style—executing further actions based on the success or failure of the current result.
-
-#### Match
-`Match` lets you handle both success and failure cases by executing one of two provided functions based on the result state.
+Ideal for operations that only indicate success or failure (similar to `void`).
 
 ```csharp
-var result = Result.Success(42);
-
-var message = result.Match(
-    onSuccess: value => $"Success with value {value}",
-    onFailure: error => $"Failure: {error.Message}"
-);
-
-Console.WriteLine(message);  // Output: Success with value 42
-```
-
-##### Match Async
-```csharp
-var message = await result.MatchAsync(
-    onSuccess: value => Task.FromResult($"Success with value {value}"),
-    onFailure: error => Task.FromResult($"Failure: {error.Message}")
-);
-```
-
-#### Switch
-`Switch` works like `Match`, but it executes actions (without returning a value) for success or failure.
-
-```csharp
-var result = Result.Success(42);
-
-result.Switch(
-    onSuccess: value => Console.WriteLine($"Success with value {value}"),
-    onFailure: error => Console.WriteLine($"Failure: {error.Message}")
-);
-```
-
-##### Switch Async
-```csharp
-await result.SwitchAsync(
-    onSuccess: value => Task.Run(() => Console.WriteLine($"Success with value {value}")),
-    onFailure: error => Task.Run(() => Console.WriteLine($"Failure: {error.Message}"))
-);
-```
-
-#### Then
-`Then` chains operations that return a `Result`. If the current result is successful, the provided function is executed and its result is returned. 
-If the current result is a failure, the error is propagated without invoking the function.
-
-```csharp
-var result = Result.Success(42);
-
-var finalResult = result.Then(value => Result.Success(value * 2));  // Success(84)
-
-var failureResult = result.Then(value => Result.Failure<int>(Error.Failure("E002", "Calculation failed")));  // Failure
-```
-
-##### Then Async
-```csharp
-var finalResult = await result.ThenAsync(value => Task.FromResult(Result.Success(value * 2)));
-```
-
-#### Else
-`Else` handles failure cases by executing an alternative function if the current result is a failure. If the result is successful, it remains unchanged.
-
-```csharp
-var result = Result.Failure(Error.Failure("E003", "Initial failure"));
-
-var alternativeResult = result.Else(error => Result.Success());  // Returns an alternative success result
-
-var unchangedResult = Result.Success().Else(error => Result.Failure(Error.Failure("E004", "Handled error")));  // Remains successful
-```
-
-##### Else Async
-```csharp
-var alternativeResult = await result.ElseAsync(error => Task.FromResult(Result.Success()));
-```
-
-
-#### Tap
-`Tap` is used for executing side effects when the result is successful without altering the result itself.
-
-```csharp
-var result = Result.Success(42);
-
-result.Tap(value => Console.WriteLine($"Logging value: {value}"));  // Logs: Logging value: 42
-```
-
-##### Tap Async
-```csharp
-await result.TapAsync(value => Task.Run(() => Console.WriteLine($"Logging value: {value}")));
-```
-
-#### TryCatch
-`TryCatch` handles exceptions within operations. It executes the provided function, returning a failure with the specified error if an exception occurs, or a success result if the operation completes without error.
-
-```csharp
-var result = Result.Success(42);
-
-var finalResult = result.TryCatch(
-    onSuccess: value => $"Processed value: {value}",
-    error: Error.Failure("E002", "Error occurred")
-);
-```
-
-##### TryCatch Async
-```csharp
-var finalResult = await result.TryCatchAsync(
-    onSuccess: value => Task.FromResult($"Processed value: {value}"),
-    error: Error.Failure("E002", "Error occurred")
-);
-```
-
----
-
-### Creating and Extending Errors
-
-**BetterResult** provides a robust `Error` struct that you can extend with rich metadata for enhanced error tracing and debugging.
-
-#### Creating an Error
-
-```csharp
-var error = Error.Failure("E001", "An error occurred");
-```
-
-#### Extending the Error
-
-You can enhance an error with additional context or metadata:
-
-```csharp
-var error = Error.Failure("E001", "An error occurred");
-
-// Extend the error message
-var extendedError = error.WithMessage("Additional context");
-
-// Add metadata
-var errorWithMetadata = extendedError.WithMetadata("RetryCount", 3);
-```
-
-You may also add multiple metadata items using a dictionary:
-
-```csharp
-var additionalMetadata = new Dictionary<string, object>
+public Result DoWork()
 {
-    { "UserId", 12345 },
-    { "Source", "API Gateway" }
-};
-
-var finalError = errorWithMetadata.WithMetadata(additionalMetadata);
+    return someCondition
+        ? Result.Success()
+        : Result.Failure(Error.Failure("E003", "Work failed"));
+}
 ```
 
-#### Retrieving Metadata
+---
 
-Retrieve metadata from an error either by key or by type:
+## Methods
+
+These extension methods allow functional composition, transformation, side effects, and recovery in a fluent style.
+
+### Bind
+
+Chains a successful `Result<T1>` into a `Result<T2>`, propagating errors.
 
 ```csharp
-var retryCount = finalError.GetMetadataByKey<int>("RetryCount");
+var result = Result.Success(10);
+var doubled = result.Bind(x => Result.Success(x * 2));  // Success(20)
+var failureChain = result.Bind(x => Result.Failure<int>(Error.Failure("E004", "Bad")));
+```
 
-var userId = finalError.GetMetadataByType<int>();
+**Async:**
+
+```csharp
+var asyncChain = await result.BindAsync(x => Task.FromResult(Result.Success(x + 5)));
+```
+
+### Do
+
+Executes side-effects without altering the result. Supports success-only, error-only, or both.
+
+```csharp
+result.Do(value => Console.WriteLine(value));
+result.Do(error => Console.WriteLine(error.Message));
+result.Do(
+    onSuccess: v => Console.WriteLine($"OK: {v}"),
+    onError: e => Console.WriteLine($"ERR: {e.Message}")
+);
+```
+
+**Async:**
+
+```csharp
+await result.DoAsync(v => Task.Run(() => Log(v)));
+await result.DoAsync(e => Task.Run(() => LogError(e)));
+```
+
+### Map
+
+Transforms the success value, propagating errors.
+
+```csharp
+var text = result.Map(x => x.ToString());
+```
+
+**Async:**
+
+```csharp
+var asyncText = await result.MapAsync(x => Task.FromResult(x.ToString()));
+```
+
+### MapError
+
+Recovers from failures by mapping an `Error` into a new `Result<T>`.
+
+```csharp
+var recovered = result.MapError(e => Result.Success(default));
+```
+
+**Async:**
+
+```csharp
+var asyncRecover = await result.MapErrorAsync(e => Task.FromResult(Result.Success(0)));
+```
+
+### Match
+
+Folds a `Result<T>` into a value of type `TResult` by providing handlers for both success and error.
+
+```csharp
+var message = result.Match(
+    value => $"Value is {value}",
+    error => $"Failed: {error.Message}"
+);
+```
+
+**Async:**
+
+```csharp
+var asyncMessage = await result.MatchAsync(
+    value => Task.FromResult($"Value: {v}"),
+    error => $"Error: {e.Message}"
+);
+```
+
+```csharp
+var asyncMessage = await result.MatchAsync(
+    value => SomeAsyncOperation(value),
+    error => $"Error: {e.Message}"
+);
+```
+
+```csharp
+var asyncMessage = await result.MatchAsync(
+    value => "MyValue",
+    error => SomeAsyncOperationBasedOnTheError(error)
+);
+```
+
+---
+
+## Error Type
+
+The `Error` struct encapsulates failure information with rich metadata and a variety of factory and extension methods.
+
+### Properties
+
+* `ErrorType Type` – Category of the error (e.g., `Failure`, `Unexpected`, `Validation`, etc.).
+* `string Code` – Error code that can be used to decifer it e.g. HTTP status codes or localization key.
+* `string Message` – Error description.
+* `Dictionary<string, object>? Metadata` – Optional contextual data.
+
+### Metadata Accessors
+
+* `T? GetMetadata<T>(string key)` – Retrieves the metadata value for `key`, or `default` if absent (throws `InvalidCastException` if type mismatch).
+* `T? GetMetadata<T>()` – Returns the first metadata value matching type `T`, or `default` if none.
+
+### Factory Methods
+
+Use the static factory methods to create standard error instances:
+
+```csharp
+var failure    = Error.Failure("E001", "General failure");
+var unexpected = Error.Unexpected("E100", "Something went wrong");
+var validation = Error.Validation("E102", "Invalid input");
+var notFound   = Error.NotFound("E404", "Item not found");
+var conflict   = Error.Conflict("E409", "Conflict detected");
+var unauthorized = Error.Unauthorized("E401", "Access denied");
+var unavailable  = Error.Unavailable("E503", "Service unavailable");
+var timeout      = Error.Timeout("E408", "Operation timed out");
+
+// Custom error with specific type
+var custom = Error.Create(ErrorType.Validation, "E123", "Custom validation error");
+```
+
+### Extension Methods
+
+Fluently augment or transform existing errors:
+
+```csharp
+var error = Error.Failure("E001", "Base error");
+
+// Prepend or replace the message
+var withMessage  = error.WithMessage("Additional context");
+
+// Merge metadata dictionary
+var mergedMeta   = error.WithMetadata(new Dictionary<string, object> {{ "UserId", 42 }});
+
+// Add or update single key
+var keyedMeta    = error.WithMetadata("RetryCount", 3);
+
+// Add metadata using type name as key
+var typedMeta    = error.WithMetadata(TimeSpan.FromSeconds(30));
 ```
 
 ---
 
 ## TODO
 
-- Refactor implementation to be more modern and functional style
 - Add ToError extension method on Exceptions
-- Rename methods to make more sense for a functional style
+- Add alternative where its possible to specify custom error return type
 
 ---
 
 ## Credits - Inspiration
 
+- [Zoran Horvat](https://www.youtube.com/@zoran-horvat)
 - [Gui Ferreira](https://www.youtube.com/watch?v=C_u1WottRA0)
 - [Milan Jovanović](https://www.youtube.com/watch?v=WCCkEe_Hy2Y)
 - [ErrorOr](https://github.com/amantinband/error-or)
-- [OneOf](https://github.com/mcintyre321/OneOf)
 

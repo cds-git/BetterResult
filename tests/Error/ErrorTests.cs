@@ -86,23 +86,25 @@ public class ErrorTests
         var error = Error.Failure("E001", "Some error", metadata);
 
         // Act
-        var retryCount = error.GetMetadataByKey<int>("RetryCount");
+        var retryCount = error.GetMetadata<int>("RetryCount");
 
         // Assert
         retryCount.Should().Be(3);
     }
 
     [Fact]
-    public void GetMetadataByKey_Should_ThrowKeyNotFoundException_When_KeyDoesNotExist()
+    public void GetMetadataByKey_Should_ReturnNull_When_KeyDoesNotExist()
     {
         // Arrange
         var error = Error.Failure("E001", "Some error");
 
         // Act
-        Action act = () => error.GetMetadataByKey<int>("RetryCount");
+        var referenceType = error.GetMetadata<string>("RetryCount");
+        var valueType = error.GetMetadata<int>("RetryCount");
 
         // Assert
-        act.Should().Throw<KeyNotFoundException>();
+        referenceType.Should().BeNull();
+        valueType.Should().Be(0);
     }
 
     [Fact]
@@ -113,7 +115,7 @@ public class ErrorTests
         var error = Error.Failure("E001", "Some error", metadata);
 
         // Act
-        Action act = () => error.GetMetadataByKey<string>("RetryCount");
+        Action act = () => error.GetMetadata<string>("RetryCount");
 
         // Assert
         act.Should().Throw<InvalidCastException>();
@@ -127,22 +129,24 @@ public class ErrorTests
         var error = Error.Failure("E001", "Some error", metadata);
 
         // Act
-        var retryCount = error.GetMetadataByType<int>();
+        var retryCount = error.GetMetadata<int>();
 
         // Assert
         retryCount.Should().Be(3);
     }
 
     [Fact]
-    public void GetMetadataByType_Should_ThrowKeyNotFoundException_When_TypeDoesNotExist()
+    public void GetMetadataByType_Should_ReturnDefault_When_TypeDoesNotExist()
     {
         // Arrange
         var error = Error.Failure("E001", "Some error");
 
         // Act
-        Action act = () => error.GetMetadataByType<int>();
+        var referenceType = error.GetMetadata<string>();
+        var valueType = error.GetMetadata<int>();
 
         // Assert
-        act.Should().Throw<KeyNotFoundException>();
+        referenceType.Should().BeNull();
+        valueType.Should().Be(0);
     }
 }

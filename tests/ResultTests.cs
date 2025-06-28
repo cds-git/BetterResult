@@ -1,6 +1,6 @@
 namespace Tests;
 
-public class ResultFactoryTests
+public class ResultTests
 {
     [Fact]
     public void Success_Should_CreateResult_WithSuccessState()
