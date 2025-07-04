@@ -8,17 +8,18 @@
 
 ## Table of Contents
 
-* [Installation](#installation)
-* [Why Use The Result Pattern?](#why-use-the-result-pattern)
-* [Usage](#usage)
-* [Methods](#methods)
-  * [Bind](#bind)
-  * [Do](#do)
-  * [Map](#map)
-  * [MapError](#maperror)
-  * [Match](#match)
-* [Error Type](#error-type)
-* [Credits - Inspiration](#credits---inspiration)
+- [Installation](#installation)
+- [Why Use The Result Pattern?](#why-use-the-result-pattern)
+- [Usage](#usage)
+- [Methods](#methods)
+  - [Bind](#bind)
+  - [Map](#map)
+  - [MapError](#maperror)
+  - [Tap](#tap)
+  - [TapError](#tapError)
+  - [Match](#match)
+- [Error Type](#error-type)
+- [Credits - Inspiration](#credits---inspiration)
 
 ---
 
@@ -27,19 +28,23 @@
 You can install the **BetterResult** NuGet package via the NuGet Package Manager, .NET CLI, or by adding the package reference to your `.csproj` file.
 
 ### NuGet Package Manager
+
 ```bash
 Install-Package BetterResult
 ```
 
 ### .NET CLI
+
 ```bash
 dotnet add package BetterResult
 ```
 
 ### Package Reference
+
 ```xml
 <PackageReference Include="BetterResult" Version="x.x.x" />
 ```
+
 Replace `x.x.x` with the latest version available on [NuGet](https://www.nuget.org/packages/BetterResult).
 
 ---
@@ -49,6 +54,7 @@ Replace `x.x.x` with the latest version available on [NuGet](https://www.nuget.o
 The Result Pattern embraces a functional approach to error handling by treating both successes and failures as explicit values. Instead of relying on exceptions—which incur performance costs and can obscure the flow of error handling—this pattern requires every operation to return a well-defined result. This enforcement means that developers must address potential errors at every step, either by handling them immediately or by deliberately propagating them.
 
 This approach offers several key benefits:
+
 - **Improved Performance:** Representing errors as values avoids the overhead associated with exception handling and stack trace generation.
 - **Explicit Error Handling:** Developers are compelled to consider and manage error conditions, leading to more robust and predictable code.
 - **Enhanced Composability:** Functional composition of operations becomes straightforward, as each function explicitly returns a result that can be seamlessly chained with others.
@@ -59,11 +65,12 @@ Overall, the Result Pattern encourages disciplined error management, ensuring th
 ---
 
 ## Usage
+
 ### Basic Usage
 
 #### `Result<TValue>`
 
-Represents either a successful outcome carrying a value of type `TValue` or a failure carrying an `Error`. 
+Represents either a successful outcome carrying a value of type `TValue` or a failure carrying an `Error`.
 You can create instances by implicit casting or factory methods:
 
 ```csharp
@@ -122,26 +129,6 @@ var failureChain = result.Bind(x => Result.Failure<int>(Error.Failure("E004", "B
 var asyncChain = await result.BindAsync(x => Task.FromResult(Result.Success(x + 5)));
 ```
 
-### Do
-
-Executes side-effects without altering the result. Supports success-only, error-only, or both.
-
-```csharp
-result.Do(value => Console.WriteLine(value));
-result.Do(error => Console.WriteLine(error.Message));
-result.Do(
-    onSuccess: v => Console.WriteLine($"OK: {v}"),
-    onError: e => Console.WriteLine($"ERR: {e.Message}")
-);
-```
-
-**Async:**
-
-```csharp
-await result.DoAsync(v => Task.Run(() => Log(v)));
-await result.DoAsync(e => Task.Run(() => LogError(e)));
-```
-
 ### Map
 
 Transforms the success value, propagating errors.
@@ -168,6 +155,45 @@ var recovered = result.MapError(e => Result.Success(default));
 
 ```csharp
 var asyncRecover = await result.MapErrorAsync(e => Task.FromResult(Result.Success(0)));
+```
+
+### Tap
+
+Executes side-effects on success without altering the result.
+
+```csharp
+result.Tap(value => Console.WriteLine(value));
+
+bool mutatableBoolean = false;
+result.Tap(value => mutatableBoolean = value is not null);
+```
+
+**Async:**
+
+```csharp
+await result.TapAsync(v => Task.Run(() => Log(v)));
+
+Task<Result<T>> GetResultAsync<T>(T value) => Task.FromResult(Result.Success(value));
+await GetResultAsync(42).TapAsync(v => Log(v));
+await GetResultAsync(42).TapAsync(v => Task.Run(() => Log(v)));
+```
+
+### TapError
+
+Executes side-effects on error without altering the result.
+
+```csharp
+result.TapError(error => Console.WriteLine(error.Message));
+```
+
+**Async:**
+
+```csharp
+await result.TapErrorAsync(error => Task.Run(() => Log(error)));
+
+Task<Result<T>> GetResultAsync<T>() => Task.FromResult(Result.Failure<T>(Error.Validation()));
+await GetResultAsync<int>().TapErrorAsync(error => Log(error));
+await GetResultAsync<int>().TapErrorAsync(error => Task.Run(() => Log(error)));
 ```
 
 ### Match
@@ -212,15 +238,15 @@ The `Error` struct encapsulates failure information with rich metadata and a var
 
 ### Properties
 
-* `ErrorType Type` – Category of the error (e.g., `Failure`, `Unexpected`, `Validation`, etc.).
-* `string Code` – Error code that can be used to decifer it e.g. HTTP status codes or localization key.
-* `string Message` – Error description.
-* `Dictionary<string, object>? Metadata` – Optional contextual data.
+- `ErrorType Type` – Category of the error (e.g., `Failure`, `Unexpected`, `Validation`, etc.).
+- `string Code` – Error code that can be used to decifer it e.g. HTTP status codes or localization key.
+- `string Message` – Error description.
+- `Dictionary<string, object>? Metadata` – Optional contextual data.
 
 ### Metadata Accessors
 
-* `T? GetMetadata<T>(string key)` – Retrieves the metadata value for `key`, or `default` if absent (throws `InvalidCastException` if type mismatch).
-* `T? GetMetadata<T>()` – Returns the first metadata value matching type `T`, or `default` if none.
+- `T? GetMetadata<T>(string key)` – Retrieves the metadata value for `key`, or `default` if absent (throws `InvalidCastException` if type mismatch).
+- `T? GetMetadata<T>()` – Returns the first metadata value matching type `T`, or `default` if none.
 
 ### Factory Methods
 
@@ -277,4 +303,3 @@ var typedMeta    = error.WithMetadata(TimeSpan.FromSeconds(30));
 - [Gui Ferreira](https://www.youtube.com/watch?v=C_u1WottRA0)
 - [Milan Jovanović](https://www.youtube.com/watch?v=WCCkEe_Hy2Y)
 - [ErrorOr](https://github.com/amantinband/error-or)
-
