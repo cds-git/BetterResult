@@ -2,6 +2,8 @@ namespace BetterResult;
 
 public static partial class ResultExtensions
 {
+    // ── Result<T> Match overloads ───────────────────────────────────
+
     /// <summary>
     /// Maps a successful <see cref="Result{TValue}"/> to <typeparamref name="TResult"/>,
     /// or maps its <see cref="Error"/> on failure.
@@ -112,7 +114,7 @@ public static partial class ResultExtensions
             await (await result.ConfigureAwait(false)).MatchAsync(mapValueAsync, mapErrorAsync).ConfigureAwait(false);
 
 
-    // Non-generic Result overloads
+    //  Result Match overloads
 
     /// <summary>
     /// Maps a non-generic <see cref="Result"/> to <typeparamref name="TResult"/>,

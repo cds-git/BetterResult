@@ -1,4 +1,4 @@
-namespace Tests;
+namespace BetterResult.Tests;
 
 public class BindTests
 {

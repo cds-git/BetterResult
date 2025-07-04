@@ -2,6 +2,8 @@ namespace BetterResult;
 
 public static partial class ResultExtensions
 {
+    // ── Result<T> Map overloads ─────────────────────────
+
     /// <summary>
     /// Transforms a successful <see cref="Result{T1}"/> value into <typeparamref name="T2"/>,
     /// propagating the original error if not successful.
@@ -40,7 +42,7 @@ public static partial class ResultExtensions
             await (await result.ConfigureAwait(false)).MapAsync(mapAsync).ConfigureAwait(false);
 
 
-    // ── Non-generic Result → Result<T> overloads ─────────────────────────
+    // ── Result Map overloads ─────────────────────────
 
     /// <summary>
     /// Projects a successful <see cref="Result"/> into a <see cref="Result{T}"/>.

@@ -2,6 +2,8 @@ namespace BetterResult;
 
 public static partial class ResultExtensions
 {
+    // ── Result<T> MapError overloads ───────────────────────────────────
+
     /// <summary>
     /// Transforms a failed <see cref="Result{T}"/> by mapping its <see cref="Error"/> into another <see cref="Result{T}"/>.
     /// </summary>
@@ -36,7 +38,7 @@ public static partial class ResultExtensions
         this Task<Result<T>> result, Func<Error, Task<Result<T>>> mapAsync) =>
             await (await result.ConfigureAwait(false)).MapErrorAsync(mapAsync).ConfigureAwait(false);
 
-    // ── Non-generic Result overloads ───────────────────────────────────
+    // ── Result MapError overloads ───────────────────────────────────
 
     /// <summary>
     /// Transforms a failed <see cref="Result"/> by mapping its <see cref="Error"/> into another <see cref="Result"/>.

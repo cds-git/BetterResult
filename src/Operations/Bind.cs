@@ -2,6 +2,8 @@ namespace BetterResult;
 
 public static partial class ResultExtensions
 {
+    // ── Result<T> Bind overloads ───────────────────────────────────
+
     /// <summary>
     /// Chains a successful <see cref="Result{T1}"/> into a <see cref="Result{T2}"/>.
     /// If <paramref name="result"/> is a success, invokes <paramref name="bind"/> with its value; otherwise propagates the original error.
@@ -54,7 +56,7 @@ public static partial class ResultExtensions
         this Task<Result<T1>> result, Func<T1, Task<Result<T2>>> bindAsync) =>
             await (await result.ConfigureAwait(false)).BindAsync(bindAsync).ConfigureAwait(false);
 
-    // ── Non-generic Result overloads ───────────────────────────────────
+    // ── Result Bind overloads ───────────────────────────────────
 
     /// <summary>
     /// Chains a successful <see cref="Result"/> into another <see cref="Result"/>.

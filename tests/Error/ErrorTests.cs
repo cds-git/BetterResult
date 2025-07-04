@@ -1,4 +1,4 @@
-namespace Tests;
+namespace BetterResult.Tests;
 
 public class ErrorTests
 {
@@ -93,7 +93,7 @@ public class ErrorTests
     }
 
     [Fact]
-    public void GetMetadataByKey_Should_ReturnNull_When_KeyDoesNotExist()
+    public void GetMetadataByKey_Should_ReturnDefault_When_KeyDoesNotExist()
     {
         // Arrange
         var error = Error.Failure("E001", "Some error");

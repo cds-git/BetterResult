@@ -12,14 +12,12 @@
 * [Why Use The Result Pattern?](#why-use-the-result-pattern)
 * [Usage](#usage)
 * [Methods](#methods)
-
   * [Bind](#bind)
   * [Do](#do)
   * [Map](#map)
   * [MapError](#maperror)
   * [Match](#match)
 * [Error Type](#error-type)
-* [TODO](#todo)
 * [Credits - Inspiration](#credits---inspiration)
 
 ---
@@ -266,6 +264,8 @@ var typedMeta    = error.WithMetadata(TimeSpan.FromSeconds(30));
 
 ## TODO
 
+- Clean up Do.cs and go through all XML documentation
+- Check if tests are sufficient
 - Add ToError extension method on Exceptions
 - Add alternative where its possible to specify custom error return type
 
