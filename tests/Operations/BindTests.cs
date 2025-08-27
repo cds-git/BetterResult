@@ -9,11 +9,11 @@ public class BindTests
         var result = Result<int>.Success(3);
 
         // Act
-        var bound = result.Bind(x => Result<string>.Success($"n={x}"));
+        var r2 = result.Bind(x => Result<string>.Success($"n={x}"));
 
         // Assert
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("n=3");
+        r2.IsSuccess.Should().BeTrue();
+        r2.Value.Should().Be("n=3");
     }
 
     [Fact]
@@ -24,11 +24,11 @@ public class BindTests
         var result = Result<int>.Failure(original);
 
         // Act
-        var bound = result.Bind(x => Result<string>.Success($"n={x}"));
+        var r2 = result.Bind(x => Result<string>.Success($"n={x}"));
 
         // Assert
-        bound.IsFailure.Should().BeTrue();
-        bound.Error.Should().Be(original);
+        r2.IsFailure.Should().BeTrue();
+        r2.Error.Should().Be(original);
     }
 
     [Fact]
@@ -38,11 +38,11 @@ public class BindTests
         var result = Result<int>.Success(4);
 
         // Act
-        var bound = await result.BindAsync(x => Task.FromResult(Result<double>.Success(x / 2.0)));
+        var r2 = await result.BindAsync(x => Task.FromResult(Result<double>.Success(x / 2.0)));
 
         // Assert
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().BeApproximately(2.0, 0.0001);
+        r2.IsSuccess.Should().BeTrue();
+        r2.Value.Should().BeApproximately(2.0, 0.0001);
     }
 
     [Fact]
@@ -53,11 +53,11 @@ public class BindTests
         var result = Result<int>.Failure(original);
 
         // Act
-        var bound = await result.BindAsync(x => Task.FromResult(Result<string>.Success("won’t run")));
+        var r2 = await result.BindAsync(x => Task.FromResult(Result<string>.Success("won’t run")));
 
         // Assert
-        bound.IsFailure.Should().BeTrue();
-        bound.Error.Should().Be(original);
+        r2.IsFailure.Should().BeTrue();
+        r2.Error.Should().Be(original);
     }
 
     [Fact]

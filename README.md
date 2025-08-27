@@ -290,9 +290,6 @@ var typedMeta    = error.WithMetadata(TimeSpan.FromSeconds(30));
 
 ## TODO
 
-- Clean up Do.cs and go through all XML documentation
-- Check if tests are sufficient
-- Add ToError extension method on Exceptions
 - Add alternative where its possible to specify custom error return type
 
 ---
