@@ -1,109 +1,99 @@
 namespace BetterResult;
 
-public static partial class ResultExtensions
+public partial record Result
 {
-    // ── Result<T> TapError overloads ───────────────────────────────────
-
     /// <summary>
-    /// Performs the specified <paramref name="onError"/> action if the <paramref name="result"/> is a failure,
-    /// then returns the original result unchanged.
+    /// Executes a side effect action with the error if the result is a failure, then returns the original result unchanged.
+    /// This method is useful for performing operations like error logging or notifications without affecting the result.
     /// </summary>
-    /// <typeparam name="T">Type of the result's value.</typeparam>
-    /// <param name="result">The <see cref="Result{T}"/> to inspect.</param>
-    /// <param name="onError">Action to perform on the error.</param>
-    /// <returns>The original <paramref name="result"/>.</returns>
-    public static Result<T> TapError<T>(this Result<T> result, Action<Error> onError)
+    /// <param name="onFailure">The action to execute with the error if the result is a failure.</param>
+    /// <returns>The original result, unchanged.</returns>
+    public Result TapError(Action<Error> onFailure)
     {
-        if (result.IsFailure) onError(result.Error);
-        return result;
+        if (IsFailure) onFailure(Error);
+        return this;
     }
 
     /// <summary>
-    /// Asynchronously performs the specified <paramref name="onError"/> function if the <paramref name="result"/> is a failure,
-    /// then returns the original result unchanged.
+    /// Asynchronously executes a side effect action with the error if the result is a failure, then returns the original result unchanged.
+    /// This method is useful for performing asynchronous operations like error logging or notifications without affecting the result.
     /// </summary>
-    /// <typeparam name="T">Type of the result's value.</typeparam>
-    /// <param name="result">The <see cref="Result{T}"/> to inspect.</param>
-    /// <param name="onError">Async function to perform on the error.</param>
-    /// <returns>A task that completes with the original <paramref name="result"/>.</returns>
-    public static async Task<Result<T>> TapErrorAsync<T>(this Result<T> result, Func<Error, Task> onError)
+    /// <param name="onFailure">The asynchronous action to execute with the error if the result is a failure.</param>
+    /// <returns>A task containing the original result, unchanged.</returns>
+    public async Task<Result> TapErrorAsync(Func<Error, Task> onFailure)
     {
-        if (result.IsFailure) await onError(result.Error).ConfigureAwait(false);
-        return result;
+        if (IsFailure) await onFailure(Error).ConfigureAwait(false);
+        return this;
+    }
+}
+
+public partial record Result<T>
+{
+    /// <summary>
+    /// Executes a side effect action with the error if the result is a failure, then returns the original result unchanged.
+    /// This method is useful for performing operations like error logging or notifications without affecting the result.
+    /// </summary>
+    /// <param name="onFailure">The action to execute with the error if the result is a failure.</param>
+    /// <returns>The original result, unchanged.</returns>
+    public Result<T> TapError(Action<Error> onFailure)
+    {
+        if (IsFailure) onFailure(Error);
+        return this;
     }
 
     /// <summary>
-    /// Awaits the specified <paramref name="result"/>, then performs the <paramref name="onError"/> action if it's a failure.
+    /// Asynchronously executes a side effect action with the error if the result is a failure, then returns the original result unchanged.
+    /// This method is useful for performing asynchronous operations like error logging or notifications without affecting the result.
     /// </summary>
-    /// <typeparam name="T">Type of the result's value.</typeparam>
-    /// <param name="result">A task returning a <see cref="Result{T}"/> to inspect.</param>
-    /// <param name="onError">Action to perform on the error.</param>
-    /// <returns>A task that completes with the original <see cref="Result{T}"/>.</returns>
-    public static async Task<Result<T>> TapErrorAsync<T>(this Task<Result<T>> result, Action<Error> onError) =>
-        (await result.ConfigureAwait(false)).TapError(onError);
-
-    /// <summary>
-    /// Awaits the specified <paramref name="result"/>, then asynchronously performs the <paramref name="onError"/> function if it's a failure.
-    /// </summary>
-    /// <typeparam name="T">Type of the result's value.</typeparam>
-    /// <param name="result">A task returning a <see cref="Result{T}"/> to inspect.</param>
-    /// <param name="onError">Async function to perform on the error.</param>
-    /// <returns>A task that completes with the original <see cref="Result{T}"/>.</returns>
-    public static async Task<Result<T>> TapErrorAsync<T>(this Task<Result<T>> result, Func<Error, Task> onError) =>
-        await (await result.ConfigureAwait(false)).TapErrorAsync(onError).ConfigureAwait(false);
-
-
-    // ── Result TapError overloads ───────────────────────────────────
-
-    /// <summary>
-    /// Performs the specified <paramref name="onError"/> action if the <paramref name="result"/> is a failure,
-    /// then returns the original result unchanged.
-    /// </summary>
-    /// <param name="result">The <see cref="Result"/> to inspect.</param>
-    /// <param name="onError">The action to perform on the <see cref="Error"/>.</param>
-    /// <returns>The original <paramref name="result"/>.</returns>
-    public static Result TapError(this Result result, Action<Error> onError)
+    /// <param name="onFailure">The asynchronous action to execute with the error if the result is a failure.</param>
+    /// <returns>A task containing the original result, unchanged.</returns>
+    public async Task<Result<T>> TapErrorAsync(Func<Error, Task> onFailure)
     {
-        if (result.IsFailure) onError(result.Error);
-        return result;
+        if (IsFailure) await onFailure(Error).ConfigureAwait(false);
+        return this;
     }
+}
+
+/// <summary>
+/// Provides extension methods for asynchronously tapping error operations (performing side effects on failures) on Task-wrapped Result instances.
+/// </summary>
+public static class TapErrorExtensions
+{
+    /// <summary>
+    /// Asynchronously executes a synchronous side effect action on a Task-wrapped void Result if it failed.
+    /// </summary>
+    /// <param name="result">The task containing the result to tap errors on.</param>
+    /// <param name="onFailure">The action to execute with the error if the result is a failure.</param>
+    /// <returns>A task containing the original result, unchanged.</returns>
+    public static async Task<Result> TapErrorAsync(this Task<Result> result, Action<Error> onFailure) =>
+        (await result.ConfigureAwait(false)).TapError(onFailure);
 
     /// <summary>
-    /// Asynchronously performs the specified <paramref name="onError"/> function if the <paramref name="result"/> is a failure,
-    /// then returns the original result unchanged.
+    /// Asynchronously executes an asynchronous side effect action on a Task-wrapped void Result if it failed.
     /// </summary>
-    /// <param name="result">The <see cref="Result"/> to inspect.</param>
-    /// <param name="onError">The asynchronous function to perform on the <see cref="Error"/>.</param>
-    /// <returns>
-    /// A <see cref="Task{Result}"/> that completes with the original <paramref name="result"/>.
-    /// </returns>
-    public static async Task<Result> TapErrorAsync(this Result result, Func<Error, Task> onError)
-    {
-        if (result.IsFailure) await onError(result.Error).ConfigureAwait(false);
-        return result;
-    }
+    /// <param name="result">The task containing the result to tap errors on.</param>
+    /// <param name="onFailure">The asynchronous action to execute with the error if the result is a failure.</param>
+    /// <returns>A task containing the original result, unchanged.</returns>
+    public static async Task<Result> TapErrorAsync(this Task<Result> result, Func<Error, Task> onFailure) =>
+        await (await result.ConfigureAwait(false)).TapErrorAsync(onFailure).ConfigureAwait(false);
 
     /// <summary>
-    /// Awaits the specified <paramref name="result"/>, then performs the <paramref name="onError"/> action if it is a failure,
-    /// and returns the completed <see cref="Result"/>.
+    /// Asynchronously executes a synchronous side effect action on a Task-wrapped Result if it failed.
     /// </summary>
-    /// <param name="result">A <see cref="Task{Result}"/> to await and inspect.</param>
-    /// <param name="onError">The action to perform on the <see cref="Error"/>.</param>
-    /// <returns>
-    /// A <see cref="Task{Result}"/> that completes with the original <see cref="Result"/>.
-    /// </returns>
-    public static async Task<Result> TapErrorAsync(this Task<Result> result, Action<Error> onError) =>
-        (await result.ConfigureAwait(false)).TapError(onError);
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="result">The task containing the result to tap errors on.</param>
+    /// <param name="onFailure">The action to execute with the error if the result is a failure.</param>
+    /// <returns>A task containing the original result, unchanged.</returns>
+    public static async Task<Result<T>> TapErrorAsync<T>(this Task<Result<T>> result, Action<Error> onFailure) =>
+        (await result.ConfigureAwait(false)).TapError(onFailure);
 
     /// <summary>
-    /// Awaits the specified <paramref name="result"/>, then asynchronously performs the <paramref name="onError"/> function if it is a failure,
-    /// and returns the completed <see cref="Result"/>.
+    /// Asynchronously executes an asynchronous side effect action on a Task-wrapped Result if it failed.
     /// </summary>
-    /// <param name="result">A <see cref="Task{Result}"/> to await and inspect.</param>
-    /// <param name="onError">The asynchronous function to perform on the <see cref="Error"/>.</param>
-    /// <returns>
-    /// A <see cref="Task{Result}"/> that completes with the original <see cref="Result"/>.
-    /// </returns>
-    public static async Task<Result> TapErrorAsync(this Task<Result> result, Func<Error, Task> onError) =>
-        await (await result.ConfigureAwait(false)).TapErrorAsync(onError).ConfigureAwait(false);
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="result">The task containing the result to tap errors on.</param>
+    /// <param name="onFailure">The asynchronous action to execute with the error if the result is a failure.</param>
+    /// <returns>A task containing the original result, unchanged.</returns>
+    public static async Task<Result<T>> TapErrorAsync<T>(this Task<Result<T>> result, Func<Error, Task> onFailure) =>
+        await (await result.ConfigureAwait(false)).TapErrorAsync(onFailure).ConfigureAwait(false);
 }

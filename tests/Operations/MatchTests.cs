@@ -17,6 +17,32 @@ public class MatchTests
     }
 
     [Fact]
+    public void Match_Nullable_Test()
+    {
+        var result = ResultWithNullable(null);
+
+        var output = result.Match(
+            value => value is null ? 0 : value * 2,
+            error => 1);
+
+        output.Should().Be(0);
+    }
+
+    [Fact]
+    public void Match_Nullable_Test2()
+    {
+        var result = ResultWithNullable(5);
+
+        var output = result.Match(
+            value => value is null ? 0 : value * 2,
+            error => 1);
+
+        output.Should().Be(10);
+    }
+
+    private static Result<int?> ResultWithNullable(int? value) => value is null ? null : value;
+
+    [Fact]
     public void Match_Failure_InvokesMapError()
     {
         var err = Error.Validation("E1", "bad");

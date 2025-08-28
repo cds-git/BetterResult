@@ -3,7 +3,7 @@ namespace BetterResult;
 /// <summary>
 /// A discriminated union of an error or void.
 /// </summary>
-public record Result
+public partial record Result
 {
     private readonly Error? _error;
 
@@ -68,30 +68,30 @@ public record Result
     /// <summary>
     /// Creates a successful result with the specified value.
     /// </summary>
-    /// <typeparam name="TValue">The type of the value in the successful result.</typeparam>
+    /// <typeparam name="T">The type of the value in the successful result.</typeparam>
     /// <param name="value">The value of the successful result.</param>
-    /// <returns>A successful <see cref="Result{TValue}"/> instance containing the provided value.</returns>
-    public static Result<TValue> Success<TValue>(TValue value) => Result<TValue>.Success(value);
+    /// <returns>A successful <see cref="Result{T}"/> instance containing the provided value.</returns>
+    public static Result<T> Success<T>(T value) => Result<T>.Success(value);
 
     /// <summary>
     /// Creates a failure result with the specified error.
     /// </summary>
-    /// <typeparam name="TValue">The type of the value in the result.</typeparam>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
     /// <param name="error">The <see cref="Error"/> associated with the failure.</param>
-    /// <returns>A failed <see cref="Result{TValue}"/> instance containing the provided error.</returns>
-    public static Result<TValue> Failure<TValue>(Error error) => Result<TValue>.Failure(error);
+    /// <returns>A failed <see cref="Result{T}"/> instance containing the provided error.</returns>
+    public static Result<T> Failure<T>(Error error) => Result<T>.Failure(error);
 }
 
 /// <summary>
 /// A discriminated union of a value or an error.
 /// </summary>
-/// <typeparam name="TValue">The type of the underlying <see cref="Value"/>.</typeparam>
-public record Result<TValue>
+/// <typeparam name="T">The type of the underlying <see cref="Value"/>.</typeparam>
+public partial record Result<T>
 {
-    private readonly TValue? _value;
+    private readonly T? _value;
     private readonly Error? _error;
 
-    private Result(TValue? value)
+    private Result(T? value)
     {
         IsFailure = false;
         _value = value;
@@ -127,31 +127,31 @@ public record Result<TValue>
     /// Gets the value.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when no value is present.</exception>
-    public TValue Value => IsFailure
+    public T Value => IsFailure
         ? throw new InvalidOperationException("Cannot access the value when result is of type failure. Check IsFailure before accessing value!")
         : _value!;
 
     /// <summary>
-    /// Creates a <see cref="Result{TValue}"/> from a value.
+    /// Creates a <see cref="Result{T}"/> from a value.
     /// </summary>
-    public static implicit operator Result<TValue>(TValue value) => new(value);
+    public static implicit operator Result<T>(T value) => new(value);
 
     /// <summary>
-    /// Creates a <see cref="Result{TValue}"/> from an error.
+    /// Creates a <see cref="Result{T}"/> from an error.
     /// </summary>
-    public static implicit operator Result<TValue>(Error error) => new(error);
+    public static implicit operator Result<T>(Error error) => new(error);
 
     /// <summary>
     /// Creates a successful result containing the specified value.
     /// </summary>
     /// <param name="value">The value of the successful result.</param>
-    /// <returns>A successful <see cref="Result{TValue}"/> instance containing the provided value.</returns>
-    public static Result<TValue> Success(TValue value) => new(value);
+    /// <returns>A successful <see cref="Result{T}"/> instance containing the provided value.</returns>
+    public static Result<T> Success(T value) => new(value);
 
     /// <summary>
     /// Creates a failure result with the specified error.
     /// </summary>
     /// <param name="error">The <see cref="Error"/> associated with the failure.</param>
-    /// <returns>A failed <see cref="Result{TValue}"/> instance containing the provided error.</returns>
-    public static Result<TValue> Failure(Error error) => new(error);
+    /// <returns>A failed <see cref="Result{T}"/> instance containing the provided error.</returns>
+    public static Result<T> Failure(Error error) => new(error);
 }

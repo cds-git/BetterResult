@@ -1,103 +1,95 @@
 namespace BetterResult;
 
-public static partial class ResultExtensions
+public partial record Result
 {
-    // ── Result<T> Bind overloads ───────────────────────────────────
+    /// <summary>
+    /// Chains another operation that returns a Result. If the current result is successful, 
+    /// executes the bind function; otherwise, propagates the current error.
+    /// </summary>
+    /// <param name="bind">The function to execute if the current result is successful.</param>
+    /// <returns>The result of the bind function if successful, or the current error if failed.</returns>
+    public Result Bind(Func<Result> bind) =>
+        IsSuccess ? bind() : Error;
 
     /// <summary>
-    /// Chains a successful <see cref="Result{T1}"/> into a <see cref="Result{T2}"/>.
-    /// If <paramref name="result"/> is a success, invokes <paramref name="bind"/> with its value; otherwise propagates the original error.
+    /// Asynchronously chains another operation that returns a Result. If the current result is successful,
+    /// executes the asynchronous bind function; otherwise, propagates the current error.
     /// </summary>
-    /// <typeparam name="T1">Type wrapped by the source <see cref="Result{T1}"/>.</typeparam>
-    /// <typeparam name="T2">Type wrapped by the resulting <see cref="Result{T2}"/>.</typeparam>
-    /// <param name="result">The source result.</param>
-    /// <param name="bind">Function to produce the next result.</param>
-    /// <returns>
-    /// The <see cref="Result{T2}"/> returned by <paramref name="bind"/> if <paramref name="result"/> is successful;
-    /// otherwise a failed <see cref="Result{T2}"/> carrying the original error.
-    /// </returns>
-    public static Result<T2> Bind<T1, T2>(
-        this Result<T1> result, Func<T1, Result<T2>> bind) =>
-            result.IsSuccess ? bind(result.Value) : result.Error;
+    /// <param name="bindAsync">The asynchronous function to execute if the current result is successful.</param>
+    /// <returns>A task containing the result of the bind function if successful, or the current error if failed.</returns>
+    public async Task<Result> BindAsync(Func<Task<Result>> bindAsync) =>
+        IsSuccess ? await bindAsync().ConfigureAwait(false) : Error;
+}
+
+public partial record Result<T>
+{
+    /// <summary>
+    /// Chains another operation that transforms the value and returns a Result. If the current result is successful,
+    /// executes the bind function with the current value; otherwise, propagates the current error.
+    /// </summary>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="bind">The function to execute with the current value if the result is successful.</param>
+    /// <returns>The result of the bind function if successful, or the current error if failed.</returns>
+    public Result<U> Bind<U>(Func<T, Result<U>> bind) =>
+        IsSuccess ? bind(Value) : Error;
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> and then chains it into a <see cref="Result{T2}"/>.
+    /// Asynchronously chains another operation that transforms the value and returns a Result. If the current result is successful,
+    /// executes the asynchronous bind function with the current value; otherwise, propagates the current error.
     /// </summary>
-    /// <typeparam name="T1">Type wrapped by the source <see cref="Result{T1}"/>.</typeparam>
-    /// <typeparam name="T2">Type wrapped by the resulting <see cref="Result{T2}"/>.</typeparam>
-    /// <param name="result">A task that produces the source result.</param>
-    /// <param name="bind">Function to produce the next result.</param>
-    /// <returns>A task that produces the chained <see cref="Result{T2}"/>.</returns>
-    public static async Task<Result<T2>> BindAsync<T1, T2>(
-        this Task<Result<T1>> result, Func<T1, Result<T2>> bind) =>
-            (await result.ConfigureAwait(false)).Bind(bind);
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="bindAsync">The asynchronous function to execute with the current value if the result is successful.</param>
+    /// <returns>A task containing the result of the bind function if successful, or the current error if failed.</returns>
+    public async Task<Result<U>> BindAsync<U>(Func<T, Task<Result<U>>> bindAsync) =>
+        IsSuccess ? await bindAsync(Value).ConfigureAwait(false) : Error;
+}
 
+/// <summary>
+/// Provides extension methods for asynchronously binding operations on Task-wrapped Result instances.
+/// </summary>
+public static class BindExtensions
+{
     /// <summary>
-    /// Chains a successful <see cref="Result{T1}"/> into a <see cref="Result{T2}"/> via an async binder.
+    /// Asynchronously chains a synchronous bind operation on a Task-wrapped Result.
     /// </summary>
-    /// <typeparam name="T1">Type wrapped by the source <see cref="Result{T1}"/>.</typeparam>
-    /// <typeparam name="T2">Type wrapped by the resulting <see cref="Result{T2}"/>.</typeparam>
-    /// <param name="result">The source result.</param>
-    /// <param name="bindAsync">Async function to produce the next result.</param>
-    /// <returns>A task that produces the chained <see cref="Result{T2}"/>.</returns>
-    public static async Task<Result<T2>> BindAsync<T1, T2>(
-        this Result<T1> result, Func<T1, Task<Result<T2>>> bindAsync) =>
-            result.IsSuccess ? await bindAsync(result.Value).ConfigureAwait(false) : result.Error;
-
-    /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> and then chains it via an async binder into a <see cref="Result{T2}"/>.
-    /// </summary>
-    /// <typeparam name="T1">Type wrapped by the source <see cref="Result{T1}"/>.</typeparam>
-    /// <typeparam name="T2">Type wrapped by the resulting <see cref="Result{T2}"/>.</typeparam>
-    /// <param name="result">A task that produces the source result.</param>
-    /// <param name="bindAsync">Async function to produce the next result.</param>
-    /// <returns>A task that produces the chained <see cref="Result{T2}"/>.</returns>
-    public static async Task<Result<T2>> BindAsync<T1, T2>(
-        this Task<Result<T1>> result, Func<T1, Task<Result<T2>>> bindAsync) =>
-            await (await result.ConfigureAwait(false)).BindAsync(bindAsync).ConfigureAwait(false);
-
-    // ── Result Bind overloads ───────────────────────────────────
-
-    /// <summary>
-    /// Chains a successful <see cref="Result"/> into another <see cref="Result"/>.
-    /// </summary>
-    /// <param name="result">The source result.</param>
-    /// <param name="bind">Function to produce the next result.</param>
-    /// <returns>
-    /// The <see cref="Result"/> returned by <paramref name="bind"/> if <paramref name="result"/> is successful;
-    /// otherwise the original failed <see cref="Result"/>.
-    /// </returns>
-    public static Result Bind(
-        this Result result, Func<Result> bind) =>
-            result.IsSuccess ? bind() : result;
-
-    /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> and then chains it into another <see cref="Result"/>.
-    /// </summary>
-    /// <param name="result">A task that produces the source result.</param>
-    /// <param name="bind">Function to produce the next result.</param>
-    /// <returns>A task that produces the chained <see cref="Result"/>.</returns>
+    /// <param name="result">The task containing the result to bind on.</param>
+    /// <param name="bind">The function to execute if the result is successful.</param>
+    /// <returns>A task containing the result of the bind operation if successful, or the original error if failed.</returns>
     public static async Task<Result> BindAsync(
         this Task<Result> result, Func<Result> bind) =>
             (await result.ConfigureAwait(false)).Bind(bind);
 
     /// <summary>
-    /// Chains a successful <see cref="Result"/> into another <see cref="Result"/> via an async binder.
+    /// Asynchronously chains an asynchronous bind operation on a Task-wrapped Result.
     /// </summary>
-    /// <param name="result">The source result.</param>
-    /// <param name="bindAsync">Async function to produce the next result.</param>
-    /// <returns>A task that produces the chained <see cref="Result"/>.</returns>
-    public static async Task<Result> BindAsync(
-        this Result result, Func<Task<Result>> bindAsync) =>
-            result.IsSuccess ? await bindAsync().ConfigureAwait(false) : result;
-
-    /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> and then chains it via an async binder into another <see cref="Result"/>.
-    /// </summary>
-    /// <param name="result">A task that produces the source result.</param>
-    /// <param name="bindAsync">Async function to produce the next result.</param>
-    /// <returns>A task that produces the chained <see cref="Result"/>.</returns>
+    /// <param name="result">The task containing the result to bind on.</param>
+    /// <param name="bindAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <returns>A task containing the result of the bind operation if successful, or the original error if failed.</returns>
     public static async Task<Result> BindAsync(
         this Task<Result> result, Func<Task<Result>> bindAsync) =>
+            await (await result.ConfigureAwait(false)).BindAsync(bindAsync).ConfigureAwait(false);
+
+    /// <summary>
+    /// Asynchronously chains a synchronous bind operation on a Task-wrapped Result with value transformation.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the input result.</typeparam>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="result">The task containing the result to bind on.</param>
+    /// <param name="bind">The function to execute with the current value if the result is successful.</param>
+    /// <returns>A task containing the result of the bind operation if successful, or the original error if failed.</returns>
+    public static async Task<Result<U>> BindAsync<T, U>(
+        this Task<Result<T>> result, Func<T, Result<U>> bind) =>
+            (await result.ConfigureAwait(false)).Bind(bind);
+
+    /// <summary>
+    /// Asynchronously chains an asynchronous bind operation on a Task-wrapped Result with value transformation.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the input result.</typeparam>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="result">The task containing the result to bind on.</param>
+    /// <param name="bindAsync">The asynchronous function to execute with the current value if the result is successful.</param>
+    /// <returns>A task containing the result of the bind operation if successful, or the original error if failed.</returns>
+    public static async Task<Result<U>> BindAsync<T, U>(
+        this Task<Result<T>> result, Func<T, Task<Result<U>>> bindAsync) =>
             await (await result.ConfigureAwait(false)).BindAsync(bindAsync).ConfigureAwait(false);
 }

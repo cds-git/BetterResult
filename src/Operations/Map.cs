@@ -1,77 +1,97 @@
 namespace BetterResult;
 
-public static partial class ResultExtensions
+public partial record Result
 {
-    // ── Result<T> Map overloads ─────────────────────────
+    /// <summary>
+    /// Transforms a successful void result into a result with a value by applying the map function.
+    /// If the current result is a failure, the error is propagated without executing the map function.
+    /// </summary>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="map">The function to execute if the current result is successful.</param>
+    /// <returns>A result containing the mapped value if successful, or the current error if failed.</returns>
+    public Result<U> Map<U>(Func<U> map) =>
+        IsSuccess ? map() : Error;
 
     /// <summary>
-    /// Transforms a successful <see cref="Result{T1}"/> value into <typeparamref name="T2"/>,
-    /// propagating the original error if not successful.
+    /// Asynchronously transforms a successful void result into a result with a value by applying the map function.
+    /// If the current result is a failure, the error is propagated without executing the map function.
     /// </summary>
-    /// <typeparam name="T1">Type wrapped by the source <see cref="Result{T1}"/>.</typeparam>
-    /// <typeparam name="T2">Type wrapped by the resulting <see cref="Result{T2}"/>.</typeparam>
-    /// <param name="result">The source result.</param>
-    /// <param name="map">Function to transform the value.</param>
-    /// <returns>
-    /// A successful <see cref="Result{T2}"/> containing the mapped value if <paramref name="result"/> is success;
-    /// otherwise a failed <see cref="Result{T2}"/> with the original error.
-    /// </returns>
-    public static Result<T2> Map<T1, T2>(
-        this Result<T1> result, Func<T1, T2> map) =>
-            result.IsSuccess ? map(result.Value) : result.Error;
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="mapAsync">The asynchronous function to execute if the current result is successful.</param>
+    /// <returns>A task containing a result with the mapped value if successful, or the current error if failed.</returns>
+    public async Task<Result<U>> MapAsync<U>(Func<Task<U>> mapAsync) =>
+        IsSuccess ? await mapAsync().ConfigureAwait(false) : Error;
+}
+
+public partial record Result<T>
+{
+    /// <summary>
+    /// Transforms the value in a successful result by applying the map function.
+    /// If the current result is a failure, the error is propagated without executing the map function.
+    /// </summary>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="map">The function to apply to the current value if the result is successful.</param>
+    /// <returns>A result containing the mapped value if successful, or the current error if failed.</returns>
+    public Result<U> Map<U>(Func<T, U> map) =>
+        IsSuccess ? map(Value) : Error;
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> then applies <see cref="Map{T1,T2}"/>.
+    /// Asynchronously transforms the value in a successful result by applying the map function.
+    /// If the current result is a failure, the error is propagated without executing the map function.
     /// </summary>
-    public static async Task<Result<T2>> MapAsync<T1, T2>(
-        this Task<Result<T1>> result, Func<T1, T2> map) =>
-            (await result.ConfigureAwait(false)).Map(map);
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="mapAsync">The asynchronous function to apply to the current value if the result is successful.</param>
+    /// <returns>A task containing a result with the mapped value if successful, or the current error if failed.</returns>
+    public async Task<Result<U>> MapAsync<U>(Func<T, Task<U>> mapAsync) =>
+        IsSuccess ? await mapAsync(Value).ConfigureAwait(false) : Error;
+}
 
+/// <summary>
+/// Provides extension methods for asynchronously mapping operations on Task-wrapped Result instances.
+/// </summary>
+public static class MapExtensions
+{
     /// <summary>
-    /// Transforms a successful <see cref="Result{T1}"/> to <typeparamref name="T2"/> via an async mapper.
+    /// Asynchronously maps a synchronous function on a Task-wrapped void Result.
     /// </summary>
-    public static async Task<Result<T2>> MapAsync<T1, T2>(
-        this Result<T1> result, Func<T1, Task<T2>> mapAsync) =>
-            result.IsSuccess ? await mapAsync(result.Value).ConfigureAwait(false) : result.Error;
-
-    /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> and then applies an async mapper.
-    /// </summary>
-    public static async Task<Result<T2>> MapAsync<T1, T2>(
-        this Task<Result<T1>> result, Func<T1, Task<T2>> mapAsync) =>
-            await (await result.ConfigureAwait(false)).MapAsync(mapAsync).ConfigureAwait(false);
-
-
-    // ── Result Map overloads ─────────────────────────
-
-    /// <summary>
-    /// Projects a successful <see cref="Result"/> into a <see cref="Result{T}"/>.
-    /// </summary>
-    /// <typeparam name="T">Type wrapped by the resulting <see cref="Result{T}"/>.</typeparam>
-    /// <param name="result">The source non-generic result.</param>
-    /// <param name="map">Function to produce a value on success.</param>
-    /// <returns>
-    /// A successful <see cref="Result{T}"/> containing the mapped value if <paramref name="result"/> is success;
-    /// otherwise a failed <see cref="Result{T}"/> with the original error.
-    /// </returns>
-    public static Result<T> Map<T>(this Result result, Func<T> map) =>
-        result.IsSuccess ? map() : result.Error;
-
-    /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> and then projects it into <see cref="Result{T}"/>.
-    /// </summary>
-    public static async Task<Result<T>> MapAsync<T>(this Task<Result> result, Func<T> map) =>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="result">The task containing the result to map on.</param>
+    /// <param name="map">The function to execute if the result is successful.</param>
+    /// <returns>A task containing a result with the mapped value if successful, or the original error if failed.</returns>
+    public static async Task<Result<U>> MapAsync<U>(this Task<Result> result, Func<U> map) =>
         (await result.ConfigureAwait(false)).Map(map);
 
     /// <summary>
-    /// Projects a successful <see cref="Result"/> into <see cref="Result{T}"/> via an async mapper.
+    /// Asynchronously maps an asynchronous function on a Task-wrapped void Result.
     /// </summary>
-    public static async Task<Result<T>> MapAsync<T>(this Result result, Func<Task<T>> mapAsync) =>
-        result.IsSuccess ? await mapAsync().ConfigureAwait(false) : result.Error;
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="result">The task containing the result to map on.</param>
+    /// <param name="mapAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <returns>A task containing a result with the mapped value if successful, or the original error if failed.</returns>
+    public static async Task<Result<U>> MapAsync<U>(this Task<Result> result, Func<Task<U>> mapAsync) =>
+        await (await result.ConfigureAwait(false)).MapAsync(mapAsync).ConfigureAwait(false);
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/> and then applies an async mapper into <see cref="Result{T}"/>.
+    /// Asynchronously maps a synchronous function on a Task-wrapped Result with value transformation.
     /// </summary>
-    public static async Task<Result<T>> MapAsync<T>(this Task<Result> result, Func<Task<T>> mapAsync) =>
-        await (await result.ConfigureAwait(false)).MapAsync(mapAsync).ConfigureAwait(false);
+    /// <typeparam name="T">The type of the value in the input result.</typeparam>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="result">The task containing the result to map on.</param>
+    /// <param name="map">The function to apply to the current value if the result is successful.</param>
+    /// <returns>A task containing a result with the mapped value if successful, or the original error if failed.</returns>
+    public static async Task<Result<U>> MapAsync<T, U>(
+        this Task<Result<T>> result, Func<T, U> map) =>
+            (await result.ConfigureAwait(false)).Map(map);
+
+    /// <summary>
+    /// Asynchronously maps an asynchronous function on a Task-wrapped Result with value transformation.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the input result.</typeparam>
+    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
+    /// <param name="result">The task containing the result to map on.</param>
+    /// <param name="mapAsync">The asynchronous function to apply to the current value if the result is successful.</param>
+    /// <returns>A task containing a result with the mapped value if successful, or the original error if failed.</returns>
+    public static async Task<Result<U>> MapAsync<T, U>(
+        this Task<Result<T>> result, Func<T, Task<U>> mapAsync) =>
+            await (await result.ConfigureAwait(false)).MapAsync(mapAsync).ConfigureAwait(false);
 }

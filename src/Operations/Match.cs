@@ -1,209 +1,193 @@
 namespace BetterResult;
 
-public static partial class ResultExtensions
+public partial record Result
 {
-    // ── Result<T> Match overloads ───────────────────────────────────
+    /// <summary>
+    /// Matches on the result state and executes the appropriate handler function.
+    /// </summary>
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccess">The function to execute if the result is successful.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure. Receives the error as a parameter.</param>
+    /// <returns>The result of executing the appropriate handler function.</returns>
+    public U Match<U>(Func<U> onSuccess, Func<Error, U> onFailure) =>
+       IsSuccess ? onSuccess() : onFailure(Error);
 
     /// <summary>
-    /// Maps a successful <see cref="Result{TValue}"/> to <typeparamref name="TResult"/>,
-    /// or maps its <see cref="Error"/> on failure.
+    /// Asynchronously matches on the result state with an asynchronous success handler and synchronous failure handler.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result{TValue}"/> to match.</param>
-    /// <param name="mapValue">Function to map the successful value.</param>
-    /// <param name="mapError">Function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>
-    /// The result of <paramref name="mapValue"/> if <paramref name="result"/> is successful;
-    /// otherwise the result of <paramref name="mapError"/>.
-    /// </returns>
-    public static TResult Match<TValue, TResult>(
-        this Result<TValue> result, Func<TValue, TResult> mapValue, Func<Error, TResult> mapError) =>
-            result.IsSuccess ? mapValue(result.Value) : mapError(result.Error);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure. Receives the error as a parameter.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public async Task<U> MatchAsync<U>(Func<Task<U>> onSuccessAsync, Func<Error, U> onFailure) =>
+        IsSuccess ? await onSuccessAsync().ConfigureAwait(false) : onFailure(Error);
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/>, then applies <see cref="Match{TValue,TResult}"/>.
+    /// Asynchronously matches on the result state with a synchronous success handler and asynchronous failure handler.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">Task producing the source <see cref="Result{TValue}"/>.</param>
-    /// <param name="mapValue">Function to map the successful value.</param>
-    /// <param name="mapError">Function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TValue, TResult>(
-        this Task<Result<TValue>> result, Func<TValue, TResult> mapValue, Func<Error, TResult> mapError) =>
-            (await result.ConfigureAwait(false)).Match(mapValue, mapError);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccess">The function to execute if the result is successful.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure. Receives the error as a parameter.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public async Task<U> MatchAsync<U>(Func<U> onSuccess, Func<Error, Task<U>> onFailureAsync) =>
+        IsSuccess ? onSuccess() : await onFailureAsync(Error).ConfigureAwait(false);
 
     /// <summary>
-    /// Maps using an async <paramref name="mapValueAsync"/>, or a sync <paramref name="mapError"/> on failure.
+    /// Asynchronously matches on the result state with asynchronous handlers for both success and failure cases.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result{TValue}"/> to match.</param>
-    /// <param name="mapValueAsync">Async function to map the successful value.</param>
-    /// <param name="mapError">Function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TValue, TResult>(
-        this Result<TValue> result, Func<TValue, Task<TResult>> mapValueAsync, Func<Error, TResult> mapError) =>
-            result.IsSuccess ? await mapValueAsync(result.Value).ConfigureAwait(false) : mapError(result.Error);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public async Task<U> MatchAsync<U>(Func<Task<U>> onSuccessAsync, Func<Error, Task<U>> onFailureAsync) =>
+        IsSuccess ? await onSuccessAsync() : await onFailureAsync(Error).ConfigureAwait(false);
+}
+
+public partial record Result<T>
+{
+    /// <summary>
+    /// Matches on the result state and executes the appropriate handler function.
+    /// </summary>
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccess">The function to execute if the result is successful. Receives the result value as a parameter.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure. Receives the error as a parameter.</param>
+    /// <returns>The result of executing the appropriate handler function.</returns>
+    public U Match<U>(Func<T, U> onSuccess, Func<Error, U> onFailure) =>
+        IsSuccess ? onSuccess(Value) : onFailure(Error);
 
     /// <summary>
-    /// Maps using a sync <paramref name="mapValue"/>, or an async <paramref name="mapErrorAsync"/> on failure.
+    /// Asynchronously matches on the result state with an asynchronous success handler and synchronous failure handler.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result{TValue}"/> to match.</param>
-    /// <param name="mapValue">Function to map the successful value.</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TValue, TResult>(
-        this Result<TValue> result, Func<TValue, TResult> mapValue, Func<Error, Task<TResult>> mapErrorAsync) =>
-            result.IsSuccess ? mapValue(result.Value) : await mapErrorAsync(result.Error).ConfigureAwait(false);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful. Receives the result value as a parameter.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure. Receives the error as a parameter.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public async Task<U> MatchAsync<U>(Func<T, Task<U>> onSuccessAsync, Func<Error, U> onFailure) =>
+        IsSuccess ? await onSuccessAsync(Value).ConfigureAwait(false) : onFailure(Error);
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/>, then applies an async <paramref name="mapValueAsync"/> and sync <paramref name="mapError"/>.
+    /// Asynchronously matches on the result state with a synchronous success handler and asynchronous failure handler.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">Task producing the source <see cref="Result{TValue}"/>.</param>
-    /// <param name="mapValueAsync">Async function to map the successful value.</param>
-    /// <param name="mapError">Function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TValue, TResult>(
-        this Task<Result<TValue>> result, Func<TValue, Task<TResult>> mapValueAsync, Func<Error, TResult> mapError) =>
-            await (await result.ConfigureAwait(false)).MatchAsync(mapValueAsync, mapError).ConfigureAwait(false);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccess">The function to execute if the result is successful. Receives the result value as a parameter.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure. Receives the error as a parameter.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public async Task<U> MatchAsync<U>(Func<T, U> onSuccess, Func<Error, Task<U>> onFailureAsync) =>
+        IsSuccess ? onSuccess(Value) : await onFailureAsync(Error).ConfigureAwait(false);
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/>, then applies sync <paramref name="mapValue"/> and async <paramref name="mapErrorAsync"/>.
+    /// Asynchronously matches on the result state with asynchronous handlers for both success and failure cases.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">Task producing the source <see cref="Result{TValue}"/>.</param>
-    /// <param name="mapValue">Function to map the successful value.</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.
-    /// </returns>
-    public static async Task<TResult> MatchAsync<TValue, TResult>(
-        this Task<Result<TValue>> result, Func<TValue, TResult> mapValue, Func<Error, Task<TResult>> mapErrorAsync) =>
-            await (await result.ConfigureAwait(false)).MatchAsync(mapValue, mapErrorAsync).ConfigureAwait(false);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful. Receives the result value as a parameter.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure. Receives the error as a parameter.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public async Task<U> MatchAsync<U>(Func<T, Task<U>> onSuccessAsync, Func<Error, Task<U>> onFailureAsync) =>
+        IsSuccess ? await onSuccessAsync(Value) : await onFailureAsync(Error).ConfigureAwait(false);
+}
+
+/// <summary>
+/// Provides extension methods for asynchronously matching on Task-wrapped Result instances.
+/// </summary>
+public static class MatchExtensions
+{
+    /// <summary>
+    /// Asynchronously matches on a Task containing a Result with synchronous handlers.
+    /// </summary>
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccess">The function to execute if the result is successful.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<U>(
+       this Task<Result> result, Func<U> onSuccess, Func<Error, U> onFailure) =>
+           (await result.ConfigureAwait(false)).Match(onSuccess, onFailure);
 
     /// <summary>
-    /// Maps using async <paramref name="mapValueAsync"/> and async <paramref name="mapErrorAsync"/>.
+    /// Asynchronously matches on a Task containing a Result with an asynchronous success handler and synchronous failure handler.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result{TValue}"/> to match.</param>
-    /// <param name="mapValueAsync">Async function to map the successful value.</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TValue, TResult>(
-        this Result<TValue> result, Func<TValue, Task<TResult>> mapValueAsync, Func<Error, Task<TResult>> mapErrorAsync) =>
-            result.IsSuccess ? await mapValueAsync(result.Value).ConfigureAwait(false) : await mapErrorAsync(result.Error).ConfigureAwait(false);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<U>(
+       this Task<Result> result, Func<Task<U>> onSuccessAsync, Func<Error, U> onFailure) =>
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailure);
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/>, then applies async <paramref name="mapValueAsync"/> and async <paramref name="mapErrorAsync"/>.
+    /// Asynchronously matches on a Task containing a Result with a synchronous success handler and asynchronous failure handler.
     /// </summary>
-    /// <typeparam name="TValue">Type wrapped by the source <see cref="Result{TValue}"/>.</typeparam>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">Task producing the source <see cref="Result{TValue}"/>.</param>
-    /// <param name="mapValueAsync">Async function to map the successful value.</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TValue, TResult>(
-        this Task<Result<TValue>> result, Func<TValue, Task<TResult>> mapValueAsync, Func<Error, Task<TResult>> mapErrorAsync) =>
-            await (await result.ConfigureAwait(false)).MatchAsync(mapValueAsync, mapErrorAsync).ConfigureAwait(false);
-
-
-    //  Result Match overloads
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccess">The function to execute if the result is successful.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<U>(
+       this Task<Result> result, Func<U> onSuccess, Func<Error, Task<U>> onFailureAsync) =>
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccess, onFailureAsync);
 
     /// <summary>
-    /// Maps a non-generic <see cref="Result"/> to <typeparamref name="TResult"/>,
-    /// or maps its <see cref="Error"/> on failure.
+    /// Asynchronously matches on a Task containing a Result with asynchronous handlers for both success and failure cases.
     /// </summary>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result"/> to match.</param>
-    /// <param name="mapValue">Function to map success (no value).</param>
-    /// <param name="mapError">Function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>
-    /// The result of <paramref name="mapValue"/> if <paramref name="result"/> is successful;
-    /// otherwise the result of <paramref name="mapError"/>.
-    /// </returns>
-    public static TResult Match<TResult>(
-        this Result result, Func<TResult> mapValue, Func<Error, TResult> mapError) =>
-            result.IsSuccess ? mapValue() : mapError(result.Error);
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<U>(
+       this Task<Result> result, Func<Task<U>> onSuccessAsync, Func<Error, Task<U>> onFailureAsync) =>
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailureAsync);
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/>, then applies <see cref="Match{TResult}"/>.
+    /// Asynchronously matches on a Task containing a Result with synchronous handlers.
     /// </summary>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">Task producing the source <see cref="Result"/>.</param>
-    /// <param name="mapValue">Function to map success (no value).</param>
-    /// <param name="mapError">Function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TResult>(
-        this Task<Result> result, Func<TResult> mapValue, Func<Error, TResult> mapError) =>
-            (await result.ConfigureAwait(false)).Match(mapValue, mapError);
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccess">The function to execute if the result is successful.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<T, U>(
+       this Task<Result<T>> result, Func<T, U> onSuccess, Func<Error, U> onFailure) =>
+           (await result.ConfigureAwait(false)).Match(onSuccess, onFailure);
 
     /// <summary>
-    /// Maps using an async <paramref name="mapValueAsync"/>, or a sync <paramref name="mapError"/> on failure.
+    /// Asynchronously matches on a Task containing a Result with an asynchronous success handler and synchronous failure handler.
     /// </summary>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result"/> to match.</param>
-    /// <param name="mapValueAsync">Async function to map success (no value).</param>
-    /// <param name="mapError">Function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TResult>(
-        this Result result, Func<Task<TResult>> mapValueAsync, Func<Error, TResult> mapError) =>
-            result.IsSuccess ? await mapValueAsync().ConfigureAwait(false) : mapError(result.Error);
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <param name="onFailure">The function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<T, U>(
+       this Task<Result<T>> result, Func<T, Task<U>> onSuccessAsync, Func<Error, U> onFailure) =>
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailure);
 
     /// <summary>
-    /// Maps using a sync <paramref name="mapValue"/>, or an async <paramref name="mapErrorAsync"/> on failure.
+    /// Asynchronously matches on a Task containing a Result with a synchronous success handler and asynchronous failure handler.
     /// </summary>
-    /// <summary>
-    /// Maps using a sync <paramref name="mapValue"/>, or an async <paramref name="mapErrorAsync"/> on failure.
-    /// </summary>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result"/> to match.</param>
-    /// <param name="mapValue">Function to map success (no value).</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TResult>(
-        this Result result, Func<TResult> mapValue, Func<Error, Task<TResult>> mapErrorAsync) =>
-            result.IsSuccess ? mapValue() : await mapErrorAsync(result.Error).ConfigureAwait(false);
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccess">The function to execute if the result is successful.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<T, U>(
+       this Task<Result<T>> result, Func<T, U> onSuccess, Func<Error, Task<U>> onFailureAsync) =>
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccess, onFailureAsync);
 
     /// <summary>
-    /// Awaits a <see cref="Task{Result}"/>, then applies sync <paramref name="mapValue"/> and async <paramref name="mapErrorAsync"/>.
+    /// Asynchronously matches on a Task containing a Result with asynchronous handlers for both success and failure cases.
     /// </summary>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">Task producing the source <see cref="Result"/>.</param>
-    /// <param name="mapValue">Function to map success (no value).</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TResult>(
-        this Task<Result> result, Func<TResult> mapValue, Func<Error, Task<TResult>> mapErrorAsync) =>
-            await (await result.ConfigureAwait(false)).MatchAsync(mapValue, mapErrorAsync).ConfigureAwait(false);
-
-    /// <summary>
-    /// Maps using async <paramref name="mapValueAsync"/>, or async <paramref name="mapErrorAsync"/> on failure.
-    /// </summary>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">The source <see cref="Result"/> to match.</param>
-    /// <param name="mapValueAsync">Async function to map success (no value).</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TResult>(
-        this Result result, Func<Task<TResult>> mapValueAsync, Func<Error, Task<TResult>> mapErrorAsync) =>
-            result.IsSuccess ? await mapValueAsync().ConfigureAwait(false) : await mapErrorAsync(result.Error).ConfigureAwait(false);
-
-    /// <summary>
-    /// Awaits a <see cref="Task{Result}"/>, then applies async <paramref name="mapValueAsync"/> and async <paramref name="mapErrorAsync"/>.
-    /// </summary>
-    /// <typeparam name="TResult">Type returned by the mapping functions.</typeparam>
-    /// <param name="result">Task producing the source <see cref="Result"/>.</param>
-    /// <param name="mapValueAsync">Async function to map success (no value).</param>
-    /// <param name="mapErrorAsync">Async function to map the <see cref="Error"/> on failure.</param>
-    /// <returns>A task yielding the mapped <typeparamref name="TResult"/>.</returns>
-    public static async Task<TResult> MatchAsync<TResult>(
-        this Task<Result> result, Func<Task<TResult>> mapValueAsync, Func<Error, Task<TResult>> mapErrorAsync) =>
-            await (await result.ConfigureAwait(false)).MatchAsync(mapValueAsync, mapErrorAsync).ConfigureAwait(false);
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <typeparam name="U">The type of the return value from the match operation.</typeparam>
+    /// <param name="result">The task containing the result to match on.</param>
+    /// <param name="onSuccessAsync">The asynchronous function to execute if the result is successful.</param>
+    /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure.</param>
+    /// <returns>A task containing the result of executing the appropriate handler function.</returns>
+    public static async Task<U> MatchAsync<T, U>(
+       this Task<Result<T>> result, Func<T, Task<U>> onSuccessAsync, Func<Error, Task<U>> onFailureAsync) =>
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailureAsync);
 }
