@@ -2,7 +2,9 @@
 
 [![NuGet](https://img.shields.io/nuget/v/BetterResult.svg)](https://www.nuget.org/packages/BetterResult) [![BuildStatus](https://github.com/cds-git/BetterResult/actions/workflows/dotnet.yml/badge.svg)](https://github.com/cds-git/BetterResult/actions/workflows/dotnet.yml)
 
-**BetterResult** is a lightweight library that adopts a functional programming approach to error handling. By representing both successes and errors as explicit values, it forces developers to acknowledge and manage errors at every step, resulting in clearer, more robust, and maintainable code.
+**BetterResult** is a lightweight library that adopts a functional programming approach to error handling. 
+By representing both successes and errors as explicit values, 
+it forces developers to acknowledge and manage errors at every step, resulting in clearer, more robust, and maintainable code.
 
 ---
 
@@ -11,13 +13,13 @@
 - [Installation](#installation)
 - [Why Use The Result Pattern?](#why-use-the-result-pattern)
 - [Usage](#usage)
-- [Methods](#methods)
-  - [Bind](#bind)
-  - [Map](#map)
-  - [MapError](#maperror)
-  - [Tap](#tap)
-  - [TapError](#tapError)
-  - [Match](#match)
+- [Operations](#operations)
+  - [Bind - Monadic Chaining](#bind---monadic-chaining)
+  - [Map - Value Transformation](#map---value-transformation)
+  - [MapError - Error Recovery](#maperror---error-recovery)
+  - [Tap - Side Effects on Success](#tap---side-effects-on-success)
+  - [TapError - Side Effects on Failure](#taperror---side-effects-on-failure)
+  - [Match - Result Folding](#match---result-folding)
 - [Error Type](#error-type)
 - [Credits - Inspiration](#credits---inspiration)
 
@@ -27,16 +29,16 @@
 
 You can install the **BetterResult** NuGet package via the NuGet Package Manager, .NET CLI, or by adding the package reference to your `.csproj` file.
 
-### NuGet Package Manager
-
-```bash
-Install-Package BetterResult
-```
-
 ### .NET CLI
 
 ```bash
 dotnet add package BetterResult
+```
+
+### NuGet Package Manager
+
+```bash
+Install-Package BetterResult
 ```
 
 ### Package Reference
@@ -51,16 +53,64 @@ Replace `x.x.x` with the latest version available on [NuGet](https://www.nuget.o
 
 ## Why Use The Result Pattern?
 
-The Result Pattern embraces a functional approach to error handling by treating both successes and failures as explicit values. Instead of relying on exceptions—which incur performance costs and can obscure the flow of error handling—this pattern requires every operation to return a well-defined result. This enforcement means that developers must address potential errors at every step, either by handling them immediately or by deliberately propagating them.
+The Result Pattern revolutionizes error handling by treating both successes and failures as explicit, first-class values in your type system. 
+This functional approach eliminates the unpredictability of exceptions while forcing developers to consciously handle every possible failure scenario.
 
-This approach offers several key benefits:
+### The Problem with Traditional Exception Handling
 
-- **Improved Performance:** Representing errors as values avoids the overhead associated with exception handling and stack trace generation.
-- **Explicit Error Handling:** Developers are compelled to consider and manage error conditions, leading to more robust and predictable code.
-- **Enhanced Composability:** Functional composition of operations becomes straightforward, as each function explicitly returns a result that can be seamlessly chained with others.
-- **Increased Code Clarity:** By making error handling an integral part of the function's contract, the intent of the code becomes clearer, resulting in better maintainability.
+```csharp
+// Traditional approach - hidden failure paths
+public User GetUser(int id)
+{
+    var user = database.FindUser(id); // Could throw SqlException
+    if (user == null) 
+        throw new UserNotFoundException(); // Could throw
+    
+    ValidateUser(user); // Could throw ValidationException
+    return user; // Success path unclear
+}
 
-Overall, the Result Pattern encourages disciplined error management, ensuring that failures are neither ignored nor hidden, but are treated as first-class citizens in your application's design.
+// Caller has no idea what could go wrong
+var user = GetUser(123); // 🎰 Mystery box of potential failures
+```
+
+### The Result Pattern Solution
+
+```csharp
+// Result approach - explicit failure paths
+public Result<User> GetUser(int id) =>
+    FindUserInDatabase(id)                    // Result<User>
+        .Bind(ValidateUser)                   // Result<User>
+        .Tap(user => logger.LogSuccess(user)); // Side effects
+
+// Caller knows exactly what they're getting
+Result<User> userResult = GetUser(123); // 📦 Explicit success or failure
+```
+
+### Key Benefits
+
+**🚀 Performance & Predictability**
+- Zero exception overhead - no stack traces or unwinding costs
+- Predictable control flow that's easy to reason about
+- Better JIT optimization opportunities
+
+**🛡️ Type-Safe Error Handling**
+- Compiler enforces error handling - forgotten error checks become compile errors
+- Self-documenting APIs that clearly communicate failure modes
+- Impossible to accidentally ignore errors
+
+**🔗 Functional Composition**
+- Chain operations seamlessly with automatic error propagation
+- Build complex pipelines from simple, testable functions
+- Error handling becomes part of the data flow, not separate control structures
+
+**🧪 Enhanced Testability**
+- Errors are just data - easy to create, assert, and verify in tests
+- No need for complex exception mocking or try-catch blocks in tests
+- Clear separation between business logic and error scenarios
+
+This pattern transforms error handling from a necessary evil into an elegant part of your application's architecture, 
+making your code more robust, maintainable, and enjoyable to work with.
 
 ---
 
@@ -68,166 +118,372 @@ Overall, the Result Pattern encourages disciplined error management, ensuring th
 
 ### Basic Usage
 
-#### `Result<TValue>`
+#### `Result<T>`
 
-Represents either a successful outcome carrying a value of type `TValue` or a failure carrying an `Error`.
-You can create instances by implicit casting or factory methods:
+Represents either a successful outcome carrying a value of type `T` or a failure carrying an `Error`.
 
+**Creating Results:**
 ```csharp
+// Implicit conversions (recommended for clean code)
 Result<int> success = 42;
-Result<int> failure = Error.Failure("E001", "An error occurred");
+Result<int> failure = Error.Failure("E001", "Invalid input");
 
-var explicitSuccess = Result.Success(100);
-var explicitFailure = Result.Failure<int>(Error.Failure("E002", "Something went wrong"));
+// Explicit factory methods
+Result<int> explicitSuccess = Result.Success(100);
+Result<int> explicitFailure = Result.Failure<int>(Error.NotFound("E404", "User not found"));
+
+// From operations that might fail
+Result<User> GetUser(int id) =>
+    id > 0 
+        ? Result.Success(new User { Id = id, Name = "John" })
+        : Result.Failure<User>(Error.Validation("INVALID_ID", "User ID must be positive"));
 ```
 
-#### Accessing Values and Errors
-
+**Working with Results:**
 ```csharp
-if (result.IsSuccess)
+Result<int> CalculateAge(DateTime birthDate)
 {
-    Console.WriteLine($"Value: {result.Value}");
+    if (birthDate > DateTime.Now)
+        return Error.Validation("FUTURE_DATE", "Birth date cannot be in the future");
+    
+    var age = DateTime.Now.Year - birthDate.Year;
+    return age; // Implicit conversion to Result<int>
+}
+
+// Safe value access
+Result<int> ageResult = CalculateAge(new DateTime(1990, 5, 15));
+
+if (ageResult.IsSuccess)
+{
+    Console.WriteLine($"Age: {ageResult.Value}");
+    // Can safely access Value property
 }
 else
 {
-    Console.WriteLine($"Error: {result.Error.Message}");
+    Console.WriteLine($"Error: {ageResult.Error.Message}");
+    // Can safely access Error property
 }
+
+// Functional pipeline (no manual checking needed)
+string description = ageResult
+    .Map(age => age >= 18 ? "Adult" : "Minor")
+    .Map(category => $"Person is classified as: {category}")
+    .Match(
+        success => success,
+        error => $"Could not determine age: {error.Message}"
+    );
 ```
 
-#### `Result` (No Value)
 
-Ideal for operations that only indicate success or failure (similar to `void`).
+#### `Result` (Void Operations)
+
+Perfect for operations that indicate success or failure without returning a value - think of it as a functional replacement for `void` methods that can fail.
 
 ```csharp
-public Result DoWork()
+// Traditional void method with exceptions
+public void DeleteUser(int userId)
 {
-    return someCondition
-        ? Result.Success()
-        : Result.Failure(Error.Failure("E003", "Work failed"));
+    if (userId <= 0) throw new ArgumentException("Invalid ID");
+    if (!userExists(userId)) throw new UserNotFoundException();
+    
+    database.Delete(userId); // Could throw SqlException
 }
+
+// Result-based approach
+public Result DeleteUser(int userId)
+{
+    if (userId <= 0) 
+        return Error.Validation("INVALID_ID", "User ID must be positive");
+    
+    if (!UserExists(userId))
+        return Error.NotFound("USER_NOT_FOUND", $"User {userId} does not exist");
+    
+    return database.TryDelete(userId)
+        ? Result.Success()
+        : Error.Unexpected("DELETE_FAILED", "Database operation failed");
+}
+
+// Usage with explicit error handling
+Result deleteResult = DeleteUser(42);
+if (deleteResult.IsFailure)
+{
+    // Handle the specific error
+    logger.LogError($"Delete failed: {deleteResult.Error.Message}");
+    return;
+}
+
+// Or use in functional pipelines
+await ValidatePermissions(currentUser, targetUserId)
+    .BindAsync(permission => DeleteUser(targetUserId))
+    .TapAsync(() => auditService.LogDeletion(targetUserId))
+    .MatchAsync(
+        () => Ok("User deleted successfully"),
+        error => BadRequest(error.Message)
+    );
 ```
 
 ---
 
-## Methods
+## Operations
 
-These extension methods allow functional composition, transformation, side effects, and recovery in a fluent style.
+These operations enable functional composition, transformation, side effects, and recovery in a fluent, chainable style. 
+All operations support both synchronous and asynchronous variants, with automatic error propagation.
 
-### Bind
+### Bind - Monadic Chaining
 
-Chains a successful `Result<T1>` into a `Result<T2>`, propagating errors.
+**Purpose**: Chains operations that can fail, automatically propagating errors without manual checking.
+
+**When to use**: When you need to perform a sequence of operations where each step depends on the previous one's success, and any step might fail.
 
 ```csharp
-var result = Result.Success(10);
-var doubled = result.Bind(x => Result.Success(x * 2));  // Success(20)
-var failureChain = result.Bind(x => Result.Failure<int>(Error.Failure("E004", "Bad")));
+// Synchronous chaining
+Result<string> ProcessUser(int userId) =>
+    GetUser(userId)                    // Result<User>
+        .Bind(user => ValidateUser(user))      // Result<User> 
+        .Bind(user => FormatUserData(user));   // Result<string>
+
+// Asynchronous chaining  
+async Task<Result<string>> ProcessUserAsync(int userId) =>
+    await GetUserAsync(userId)         // Task<Result<User>>
+        .BindAsync(ValidateUserAsync)          // Task<Result<User>>
+        .BindAsync(FormatUserDataAsync);       // Task<Result<string>>
+
+// Mixed sync/async
+await GetUserAsync(userId)
+    .BindAsync(user => ValidateUser(user))     // Sync validation
+    .BindAsync(user => SaveUserAsync(user));   // Back to async
 ```
 
-**Async:**
+**Key point**: Each operation in the chain receives the unwrapped value from the previous step. 
+If any step fails, the chain short-circuits and the error propagates to the final result.
+
+### Map - Value Transformation
+
+**Purpose**: Transforms the value inside a successful result without the possibility of failure.
+
+**When to use**: When you need to convert or transform data, but the transformation itself cannot fail (pure functions).
 
 ```csharp
-var asyncChain = await result.BindAsync(x => Task.FromResult(Result.Success(x + 5)));
+// Simple transformations
+Result<int> number = 42;
+Result<string> text = number.Map(x => x.ToString());
+Result<string> upper = text.Map(s => s.ToUpper());
+
+// Chaining transformations
+Result<UserDto> dto = GetUser(userId)
+    .Map(user => user.Name)                    // Extract name
+    .Map(name => name.Trim().ToUpper())        // Clean and format
+    .Map(name => new UserDto { Name = name }); // Create DTO
+
+// Async transformations
+await GetUserAsync(userId)
+    .MapAsync(user => FormatNameAsync(user.Name))  // Async formatting
+    .MapAsync(name => CreateDtoAsync(name));       // Async DTO creation
+
+// Transform void Result to valued Result
+Result voidResult = DoWork();
+Result<string> message = voidResult.Map(() => "Work completed successfully");
 ```
 
-### Map
+**Key point**: Map operations receive unwrapped values and return plain values (not Results). 
+Errors automatically propagate without executing the map operation.
 
-Transforms the success value, propagating errors.
+### MapError - Error Recovery
+
+**Purpose**: Transforms or recovers from failures by examining the error and potentially converting it to a success.
+
+**When to use**: When you want to provide fallback values, retry logic, or transform one error type into another.
 
 ```csharp
-var text = result.Map(x => x.ToString());
+// Provide fallback values
+Result<User> user = GetUser(userId)
+    .MapError(error => error.Code == "NOT_FOUND" 
+        ? Result.Success(User.Guest)     // Convert to success
+        : error);                        // Keep original error
+
+// Error transformation
+Result<Data> data = LoadData()
+    .MapError(error => Error.Validation("LOAD_001", $"Failed to load: {error.Message}"));
+
+// Retry logic
+Result<string> content = DownloadContent()
+    .MapError(async error => 
+    {
+        if (error.Code == "TIMEOUT" && retryCount < 3)
+            return await RetryDownload();
+        return error;
+    });
+
+// Graceful degradation
+Result<WeatherData> weather = GetWeatherFromApi()
+    .MapError(error => GetCachedWeather())     // Fallback to cache
+    .MapError(error => GetDefaultWeather());   // Ultimate fallback
 ```
 
-**Async:**
+**Key point**: MapError only executes on failures and can convert them back to successes. Successful results pass through unchanged.
+
+### Tap - Side Effects on Success
+
+**Purpose**: Executes side effects (logging, notifications, debugging) on successful results without modifying the result.
+
+**When to use**: When you need to perform actions like logging, caching, or notifications while maintaining the functional pipeline.
 
 ```csharp
-var asyncText = await result.MapAsync(x => Task.FromResult(x.ToString()));
+// Logging and debugging
+var result = GetUser(userId)
+    .Tap(user => logger.LogInfo($"Retrieved user: {user.Name}"))
+    .Map(user => user.Email)
+    .Tap(email => Console.WriteLine($"Processing email: {email}"));
+
+// Caching successful results
+var data = await LoadExpensiveDataAsync()
+    .TapAsync(data => cache.SetAsync(cacheKey, data))
+    .MapAsync(data => TransformData(data));
+
+// Notifications and metrics
+await ProcessOrderAsync(order)
+    .TapAsync(async result => await notificationService.NotifySuccess(result))
+    .TapAsync(result => metrics.IncrementCounter("orders.processed"));
+
+// Multiple side effects
+GetUser(userId)
+    .Tap(user => auditService.LogAccess(user.Id))
+    .Tap(user => analytics.TrackUserActivity(user))
+    .Tap(user => cache.Warm(user.PreferredSettings));
 ```
 
-### MapError
+**Key point**: Tap actions receive the unwrapped value but don't affect the result. The original result passes through unchanged, making it perfect for pipeline instrumentation.
 
-Recovers from failures by mapping an `Error` into a new `Result<T>`.
+### TapError - Side Effects on Failure
+
+**Purpose**: Executes side effects on failed results without modifying the result.
+
+**When to use**: When you need to log errors, send alerts, or perform cleanup operations while preserving the error for downstream handling.
 
 ```csharp
-var recovered = result.MapError(e => Result.Success(default));
+// Error logging and monitoring
+var result = GetUser(userId)
+    .TapError(error => logger.LogError($"Failed to get user {userId}: {error.Message}"))
+    .TapError(error => metrics.IncrementCounter("user.fetch.errors"))
+    .TapError(error => alertService.SendAlert(error));
+
+// Async error handling
+await ProcessPaymentAsync(payment)
+    .TapErrorAsync(async error => await auditService.LogFailedPayment(payment, error))
+    .TapErrorAsync(async error => await notificationService.NotifyPaymentFailure(error));
+
+// Conditional error actions
+await UploadFileAsync(file)
+    .TapErrorAsync(async error => 
+    {
+        if (error.Code == "QUOTA_EXCEEDED")
+            await cleanupService.FreeSpace();
+        if (error.Code == "NETWORK_ERROR") 
+            await diagnosticsService.TestConnection();
+    });
+
+// Debugging and development
+var pipeline = LoadData()
+    .TapError(error => Console.WriteLine($"Step 1 failed: {error}"))
+    .MapError(error => RetryLogic(error))
+    .TapError(error => Console.WriteLine($"Retry also failed: {error}"));
 ```
 
-**Async:**
+**Key point**: TapError actions receive the error but don't modify the result. Failed results remain failed, successful results are untouched.
+
+### Match - Result Folding
+
+**Purpose**: Converts a Result into a concrete value by providing handlers for both success and failure cases.
+
+**When to use**: When you need to extract a final value from a Result, typically at the end of a functional pipeline or when interfacing with non-Result code.
 
 ```csharp
-var asyncRecover = await result.MapErrorAsync(e => Task.FromResult(Result.Success(0)));
-```
+// Simple value extraction
+string message = GetUser(userId).Match(
+    user => $"Welcome, {user.Name}!",
+    error => $"Error: {error.Message}"
+);
 
-### Tap
+// HTTP response mapping
+return await ProcessRequestAsync(request).MatchAsync(
+    async data => Ok(await SerializeAsync(data)),
+    error => BadRequest(error.Message)
+);
 
-Executes side-effects on success without altering the result.
+// Complex branching logic
+var actionResult = await ValidateAndProcessAsync(input).MatchAsync(
+    async result => 
+    {
+        await notificationService.NotifySuccess(result);
+        return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
+    },
+    error => error.Type switch
+    {
+        ErrorType.Validation => BadRequest(error.Message),
+        ErrorType.NotFound => NotFound(error.Message),
+        ErrorType.Unauthorized => Unauthorized(error.Message),
+        _ => StatusCode(500, "Internal server error")
+    }
+);
 
-```csharp
-result.Tap(value => Console.WriteLine(value));
+// Aggregating multiple results
+string summary = await Task.WhenAll(
+        ProcessDataAsync(data1),
+        ProcessDataAsync(data2), 
+        ProcessDataAsync(data3)
+    )
+    .ContinueWith(tasks => tasks.Result
+        .Select(result => result.Match(
+            success => $"✓ {success}",
+            error => $"✗ {error.Message}"
+        ))
+        .Aggregate((a, b) => $"{a}\n{b}")
+    );
 
-bool mutatableBoolean = false;
-result.Tap(value => mutatableBoolean = value is not null);
-```
-
-**Async:**
-
-```csharp
-await result.TapAsync(v => Task.Run(() => Log(v)));
-
-Task<Result<T>> GetResultAsync<T>(T value) => Task.FromResult(Result.Success(value));
-await GetResultAsync(42).TapAsync(v => Log(v));
-await GetResultAsync(42).TapAsync(v => Task.Run(() => Log(v)));
-```
-
-### TapError
-
-Executes side-effects on error without altering the result.
-
-```csharp
-result.TapError(error => Console.WriteLine(error.Message));
-```
-
-**Async:**
-
-```csharp
-await result.TapErrorAsync(error => Task.Run(() => Log(error)));
-
-Task<Result<T>> GetResultAsync<T>() => Task.FromResult(Result.Failure<T>(Error.Validation()));
-await GetResultAsync<int>().TapErrorAsync(error => Log(error));
-await GetResultAsync<int>().TapErrorAsync(error => Task.Run(() => Log(error)));
-```
-
-### Match
-
-Folds a `Result<T>` into a value of type `TResult` by providing handlers for both success and error.
-
-```csharp
-var message = result.Match(
-    value => $"Value is {value}",
-    error => $"Failed: {error.Message}"
+// Early termination patterns
+return users.Match(
+    userList => userList.Any() 
+        ? ProcessUsers(userList) 
+        : Result.Failure(Error.NotFound("NO_USERS", "No users to process")),
+    error => error
 );
 ```
 
-**Async:**
+**Key point**: Match is terminal - it extracts the final value from the Result monad. 
+Both success and failure handlers must return the same type, and one of them will always execute.
+
+### Operation Composition Examples
 
 ```csharp
-var asyncMessage = await result.MatchAsync(
-    value => Task.FromResult($"Value: {v}"),
-    error => $"Error: {e.Message}"
-);
-```
+// Complete pipeline combining all operations
+async Task<IActionResult> UpdateUserProfileAsync(int userId, UpdateProfileRequest request)
+{
+    return await GetUserAsync(userId)
+        .TapAsync(user => logger.LogInfo($"Updating profile for user {user.Id}"))
+        .BindAsync(user => ValidateUpdateRequestAsync(request, user))
+        .TapAsync(validatedData => auditService.LogValidation(validatedData))
+        .BindAsync(data => UpdateUserInDatabaseAsync(data))
+        .TapAsync(updatedUser => cache.InvalidateUser(updatedUser.Id))
+        .TapErrorAsync(error => logger.LogError($"Profile update failed: {error.Message}"))
+        .MatchAsync(
+            user => Ok(new { message = "Profile updated successfully", user = user.ToDto() }),
+            error => error.Type switch
+            {
+                ErrorType.NotFound => NotFound(error.Message),
+                ErrorType.Validation => BadRequest(error.Message),
+                ErrorType.Unauthorized => Forbid(error.Message),
+                _ => StatusCode(500, "Internal server error")
+            }
+        );
+}
 
-```csharp
-var asyncMessage = await result.MatchAsync(
-    value => SomeAsyncOperation(value),
-    error => $"Error: {e.Message}"
-);
-```
-
-```csharp
-var asyncMessage = await result.MatchAsync(
-    value => "MyValue",
-    error => SomeAsyncOperationBasedOnTheError(error)
-);
+// Error handling with fallbacks
+Result<Configuration> config = LoadPrimaryConfig()
+    .TapError(error => logger.LogWarning($"Primary config failed: {error.Message}"))
+    .MapError(error => LoadBackupConfig())
+    .TapError(error => logger.LogWarning($"Backup config failed: {error.Message}"))
+    .MapError(error => LoadDefaultConfig())
+    .TapError(error => logger.LogError($"All config sources failed: {error.Message}"));
 ```
 
 ---
@@ -288,9 +544,47 @@ var typedMeta    = error.WithMetadata(TimeSpan.FromSeconds(30));
 
 ---
 
-## TODO
+## Roadmap
 
-- Add alternative where its possible to specify custom error return type
+Future enhancements planned to make BetterResult even more powerful for functional programming:
+
+### High Priority - Core Functional Operations
+
+**`Or` / `OrElse` - Fallback Results**
+- Simple fallback chaining: `GetFromApi().Or(() => GetFromCache()).Or(() => GetDefault())`
+- Essential for resilient systems with multiple data sources
+
+**`Try` - Exception Integration** 
+- Convert exception-throwing code to Results: `Result.Try(() => riskyOperation())`
+- Bridge between traditional .NET code and functional error handling
+
+**`Filter` / `Where` - Conditional Success**
+- Convert success to failure based on predicates: `result.Filter(x => x > 0, "Must be positive")`
+- Perfect for validation pipelines
+
+### Medium Priority - Collection Operations
+
+**`Traverse` / `Sequence` - Collection Handling**
+- Transform `IEnumerable<Result<T>>` to `Result<IEnumerable<T>>`
+- Essential for processing collections where all items must succeed
+
+**`Combine` - Result Aggregation**
+- Merge multiple results into one: `Result.Combine(result1, result2, result3)`
+- Useful for operations requiring multiple inputs
+
+### Lower Priority - Advanced Patterns
+
+**`SelectMany` - LINQ Integration**
+- Enable LINQ query syntax for Result compositions
+- Syntactic sugar for complex Bind chains
+
+**`Apply` - Applicative Pattern**
+- Apply functions wrapped in Results to values wrapped in Results
+- Advanced functional composition scenarios
+
+**`Zip` - Result Pairing**
+- Combine two results into a tuple result
+- Specialized composition for paired operations
 
 ---
 
