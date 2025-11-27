@@ -22,7 +22,7 @@ public class TapTests
     public async Task TapAsync_Should_InvokeOnSuccess_When_ResultTvalueIsTaskAndSuccess()
     {
         // Arrange
-        var result = Result.Success(42);
+        Result<int> result = 42;
         var isMeaningOfLife = false;
 
         // Act
@@ -75,40 +75,7 @@ public class TapTests
         r2.IsSuccess.Should().BeTrue();
     }
 
-    [Fact]
-    public void Tap_Should_InvokeOnSuccess_When_ResultIsSuccess()
-    {
-        // Arrange
-        var result = Result.Success();
-        var seen = false;
 
-        // Act
-        var r2 = result.Tap(() => seen = true);
-
-        // Assert
-        seen.Should().BeTrue();
-        r2.Should().BeSameAs(result);
-    }
-
-
-    [Fact]
-    public async Task TapAsync_Should_InvokeOnSuccess_When_ResultIsTaskAndSuccess()
-    {
-        // Arrange
-        var result = Result.Success();
-        var flag = false;
-
-        // Act
-        var r2 = await result.TapAsync(() => Task.Run(() =>
-        {
-            flag = true;
-            Console.WriteLine($"Should this be enabled? {flag}");
-        }));
-
-        // Assert
-        flag.Should().BeTrue();
-        r2.Should().BeSameAs(result);
-    }
 
     [Fact]
     public async Task TapAsync_Should_InvokeOnSuccess_When_ResultIsTaskIsSuccess()
@@ -118,7 +85,7 @@ public class TapTests
         var flag = false;
 
         // Act
-        var r2 = await result.TapAsync(() =>
+        var r2 = await result.TapAsync((_ ) =>
         {
             flag = true;
             Console.WriteLine($"Should this be enabled? {flag}");
@@ -137,7 +104,7 @@ public class TapTests
         var flag = false;
 
         // Act
-        var r2 = await result.TapAsync(() => Task.Run(() =>
+        var r2 = await result.TapAsync((_) => Task.Run(() =>
         {
             flag = true;
             Console.WriteLine($"Should this be enabled? {flag}");
@@ -148,6 +115,6 @@ public class TapTests
         r2.IsSuccess.Should().BeTrue();
     }
 
-    private static Task<Result<T>> GetResultAsync<T>(T value) => Task.FromResult(Result.Success(value));
-    private static Task<Result> GetResultAsync() => Task.FromResult(Result.Success());
+    private static Task<Result<T>> GetResultAsync<T>(T value) => Task.FromResult(Result<T>.Success(value));
+    private static Task<Result<NoValue>> GetResultAsync() => Task.FromResult(Result<NoValue>.Success(NoValue.Instance));
 }

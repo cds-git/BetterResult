@@ -79,9 +79,9 @@ var user = GetUser(123); // 🎰 Mystery box of potential failures
 ```csharp
 // Result approach - explicit failure paths
 public Result<User> GetUser(int id) =>
-    FindUserInDatabase(id)                    // Result<User>
-        .Bind(ValidateUser)                   // Result<User>
-        .Tap(user => logger.LogSuccess(user)); // Side effects
+    FindUserInDatabase(id)                      // Result<User>
+        .Tap(user => ValidateUser(user))        // Side effect validation
+        .Tap(user => logger.LogSuccess(user));  // Side effects
 
 // Caller knows exactly what they're getting
 Result<User> userResult = GetUser(123); // 📦 Explicit success or failure
@@ -174,23 +174,65 @@ string description = ageResult
     );
 ```
 
+---
 
-#### `Result` (Void Operations)
+### Operations Without Return Values
 
-Perfect for operations that indicate success or failure without returning a value - think of it as a functional replacement for `void` methods that can fail.
+Many operations succeed or fail without returning meaningful data - like deleting a record, sending an email, or updating a setting. For these cases, use `Result<NoValue>`.
+
+**What is NoValue?**
+
+`NoValue` is a special type that represents "no meaningful value". Think of it as a type-safe way to say "this operation succeeded, but there's nothing to return."
 
 ```csharp
-// Traditional void method with exceptions
+// Simple example
+Result<NoValue> SendEmail(string to, string subject)
+{
+    if (string.IsNullOrEmpty(to))
+        return Error.Validation("EMPTY_TO", "Recipient required");
+    
+    emailService.Send(to, subject);
+    return NoValue.Instance;  // Success, but no data to return
+}
+
+// Use _ (discard) in lambdas when the value doesn't matter
+Result<NoValue> result = DoWork();
+result
+    .Tap(_ => Console.WriteLine("Work completed"))   // We don't need the NoValue
+    .Map(_ => "Operation successful");                // Transform to Result<string>
+```
+
+**Composing with Result<T>**
+
+The real power shows when chaining operations - `Result<NoValue>` works seamlessly with `Result<T>`:
+
+```csharp
+Result<string> ProcessUser(int userId) =>
+    GetUser(userId)              // Result<User>
+        .Bind(ValidateUser)      // Result<NoValue> - validation doesn't return data
+        .Bind(_ => GetUser(userId))  // Back to Result<User>
+        .Map(user => user.Name); // Result<string>
+
+// Complex pipeline mixing valued and void results
+await GetUserEmail(userId)               // Result<string>
+    .BindAsync(email => SendWelcomeEmail(email))  // Result<NoValue>
+    .BindAsync(_ => LogEmailSent(userId))         // Result<NoValue>
+    .MapAsync(_ => "Welcome email sent");         // Result<string>
+```
+
+---
+
+```csharp
+// Traditional approach
 public void DeleteUser(int userId)
 {
     if (userId <= 0) throw new ArgumentException("Invalid ID");
     if (!userExists(userId)) throw new UserNotFoundException();
-    
     database.Delete(userId); // Could throw SqlException
 }
 
-// Result-based approach
-public Result DeleteUser(int userId)
+// With Result<NoValue>
+public Result<NoValue> DeleteUser(int userId)
 {
     if (userId <= 0) 
         return Error.Validation("INVALID_ID", "User ID must be positive");
@@ -198,26 +240,24 @@ public Result DeleteUser(int userId)
     if (!UserExists(userId))
         return Error.NotFound("USER_NOT_FOUND", $"User {userId} does not exist");
     
-    return database.TryDelete(userId)
-        ? Result.Success()
-        : Error.Unexpected("DELETE_FAILED", "Database operation failed");
+    database.Delete(userId);
+    return NoValue.Instance;
 }
 
-// Usage with explicit error handling
-Result deleteResult = DeleteUser(42);
+// Explicit error handling
+Result<NoValue> deleteResult = DeleteUser(42);
 if (deleteResult.IsFailure)
 {
-    // Handle the specific error
     logger.LogError($"Delete failed: {deleteResult.Error.Message}");
     return;
 }
 
-// Or use in functional pipelines
+// Functional pipeline
 await ValidatePermissions(currentUser, targetUserId)
-    .BindAsync(permission => DeleteUser(targetUserId))
-    .TapAsync(() => auditService.LogDeletion(targetUserId))
+    .BindAsync(_ => DeleteUser(targetUserId))
+    .TapAsync(_ => auditService.LogDeletion(targetUserId))
     .MatchAsync(
-        () => Ok("User deleted successfully"),
+        _ => Ok("User deleted successfully"),
         error => BadRequest(error.Message)
     );
 ```
@@ -239,8 +279,9 @@ All operations support both synchronous and asynchronous variants, with automati
 // Synchronous chaining
 Result<string> ProcessUser(int userId) =>
     GetUser(userId)                    // Result<User>
-        .Bind(user => ValidateUser(user))      // Result<User> 
-        .Bind(user => FormatUserData(user));   // Result<string>
+        .Bind(ValidateUser)                    // Result<NoValue>
+        .Bind(_ => GetUser(userId))            // Result<User>
+        .Bind(FormatUserData);                 // Result<string>
 
 // Asynchronous chaining  
 async Task<Result<string>> ProcessUserAsync(int userId) =>
@@ -280,9 +321,9 @@ await GetUserAsync(userId)
     .MapAsync(user => FormatNameAsync(user.Name))  // Async formatting
     .MapAsync(name => CreateDtoAsync(name));       // Async DTO creation
 
-// Transform void Result to valued Result
-Result voidResult = DoWork();
-Result<string> message = voidResult.Map(() => "Work completed successfully");
+// Transform Result<NoValue> to valued Result
+Result<NoValue> workResult = DoWork();
+Result<string> message = workResult.Map(_ => "Work completed successfully");
 ```
 
 **Key point**: Map operations receive unwrapped values and return plain values (not Results). 
@@ -541,50 +582,6 @@ var keyedMeta    = error.WithMetadata("RetryCount", 3);
 // Add metadata using type name as key
 var typedMeta    = error.WithMetadata(TimeSpan.FromSeconds(30));
 ```
-
----
-
-## Roadmap
-
-Future enhancements planned to make BetterResult even more powerful for functional programming:
-
-### High Priority - Core Functional Operations
-
-**`Or` / `OrElse` - Fallback Results**
-- Simple fallback chaining: `GetFromApi().Or(() => GetFromCache()).Or(() => GetDefault())`
-- Essential for resilient systems with multiple data sources
-
-**`Try` - Exception Integration** 
-- Convert exception-throwing code to Results: `Result.Try(() => riskyOperation())`
-- Bridge between traditional .NET code and functional error handling
-
-**`Filter` / `Where` - Conditional Success**
-- Convert success to failure based on predicates: `result.Filter(x => x > 0, "Must be positive")`
-- Perfect for validation pipelines
-
-### Medium Priority - Collection Operations
-
-**`Traverse` / `Sequence` - Collection Handling**
-- Transform `IEnumerable<Result<T>>` to `Result<IEnumerable<T>>`
-- Essential for processing collections where all items must succeed
-
-**`Combine` - Result Aggregation**
-- Merge multiple results into one: `Result.Combine(result1, result2, result3)`
-- Useful for operations requiring multiple inputs
-
-### Lower Priority - Advanced Patterns
-
-**`SelectMany` - LINQ Integration**
-- Enable LINQ query syntax for Result compositions
-- Syntactic sugar for complex Bind chains
-
-**`Apply` - Applicative Pattern**
-- Apply functions wrapped in Results to values wrapped in Results
-- Advanced functional composition scenarios
-
-**`Zip` - Result Pairing**
-- Combine two results into a tuple result
-- Specialized composition for paired operations
 
 ---
 

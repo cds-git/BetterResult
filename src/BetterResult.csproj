@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net9.0;net10.0</TargetFrameworks>
     <IsPackable>true</IsPackable>
     <IsTestProject>false</IsTestProject>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageId>BetterResult</PackageId>
-    <Version>1.0.1</Version>
+    <Version>2.0.0</Version>
     <Authors>cds</Authors>
     <PackageTags>Result,Results,BetterResult,Error,Handling</PackageTags>
     <Description>Implementation of The Result Pattern</Description>
