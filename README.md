@@ -14,13 +14,14 @@ it forces developers to acknowledge and manage errors at every step, resulting i
 - [Why Use The Result Pattern?](#why-use-the-result-pattern)
 - [Usage](#usage)
 - [Operations](#operations)
-  - [Try - Exception Handling](#try---exception-handling)
   - [Bind - Monadic Chaining](#bind---monadic-chaining)
   - [Map - Value Transformation](#map---value-transformation)
   - [MapError - Error Recovery](#maperror---error-recovery)
   - [Tap - Side Effects on Success](#tap---side-effects-on-success)
   - [TapError - Side Effects on Failure](#taperror---side-effects-on-failure)
   - [Match - Result Folding](#match---result-folding)
+  - [Try - Exception Handling](#try---exception-handling)
+  - [Ensure - Validation Guards](#ensure---validation-guards)
 - [Error Type](#error-type)
 - [Credits - Inspiration](#credits---inspiration)
 
@@ -269,44 +270,6 @@ await ValidatePermissions(currentUser, targetUserId)
 
 These operations enable functional composition, transformation, side effects, and recovery in a fluent, chainable style. 
 All operations support both synchronous and asynchronous variants, with automatic error propagation.
-
-### Try - Exception Handling
-
-**Purpose**: Wraps exception-throwing operations into Results, bridging the gap between traditional .NET APIs and the Result pattern.
-
-**When to use**: When you need to call code that throws exceptions (parsing, file I/O, database calls, third-party APIs) and want to handle errors functionally.
-
-```csharp
-// Basic exception catching
-Result<int> numberResult = Result<string>.Success("42")
-    .Try(x => int.Parse(x));  // Catches FormatException
-
-// With custom error mapping
-Result<User> userResult = Result<string>.Success(jsonString)
-    .Try(
-        json => JsonSerializer.Deserialize<User>(json),
-        ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}")
-    );
-
-// Chaining with other operations
-Result<int> processedResult = Result<string>.Success("  123  ")
-    .Map(s => s.Trim())
-    .Try(s => int.Parse(s))                    // Can throw
-    .Map(x => x * 2);                          // Only runs if parsing succeeded
-
-// Async operations
-Result<string> fileContent = await Result<string>.Success("data.txt")
-    .TryAsync(async path => await File.ReadAllTextAsync(path));
-
-// Real-world pipeline
-var result = await GetConfigPathAsync()              // Result<string>
-    .TryAsync(async path => await File.ReadAllTextAsync(path))  // Result<string>
-    .Try(json => JsonSerializer.Deserialize<Config>(json))      // Result<Config>
-    .Tap(config => logger.LogInfo($"Loaded config from {config.Source}"))
-    .MapAsync(async config => await ValidateConfigAsync(config));
-```
-
-**Key point**: Try automatically catches all exceptions and converts them to `Error.Unexpected` results with exception metadata. Success values pass through unchanged, and existing errors propagate without executing the operation.
 
 ### Bind - Monadic Chaining
 
@@ -565,6 +528,101 @@ Result<Configuration> config = LoadPrimaryConfig()
     .MapError(error => LoadDefaultConfig())
     .TapError(error => logger.LogError($"All config sources failed: {error.Message}"));
 ```
+
+### Try - Exception Handling
+
+**Purpose**: Wraps exception-throwing operations into Results, bridging the gap between traditional .NET APIs and the Result pattern.
+
+**When to use**: When you need to call code that throws exceptions (parsing, file I/O, database calls, third-party APIs) and want to handle errors functionally.
+
+```csharp
+// Basic exception catching
+Result<int> numberResult = Result<string>.Success("42")
+    .Try(x => int.Parse(x));  // Catches FormatException
+
+// With custom error mapping
+Result<User> userResult = Result<string>.Success(jsonString)
+    .Try(
+        json => JsonSerializer.Deserialize<User>(json),
+        ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}")
+    );
+
+// Chaining with other operations
+Result<int> processedResult = Result<string>.Success("  123  ")
+    .Map(s => s.Trim())
+    .Try(s => int.Parse(s))                    // Can throw
+    .Map(x => x * 2);                          // Only runs if parsing succeeded
+
+// Async operations
+Result<string> fileContent = await Result<string>.Success("data.txt")
+    .TryAsync(async path => await File.ReadAllTextAsync(path));
+
+// Real-world pipeline
+var result = await GetConfigPathAsync()              // Result<string>
+    .TryAsync(async path => await File.ReadAllTextAsync(path))  // Result<string>
+    .Try(json => JsonSerializer.Deserialize<Config>(json))      // Result<Config>
+    .Tap(config => logger.LogInfo($"Loaded config from {config.Source}"))
+    .MapAsync(async config => await ValidateConfigAsync(config));
+```
+
+**Key point**: Try automatically catches all exceptions and converts them to `Error.Unexpected` results with exception metadata. Success values pass through unchanged, and existing errors propagate without executing the operation.
+
+### Ensure - Validation Guards
+
+**Purpose**: Converts successful results to failures based on validation predicates, making validation chains declarative and composable.
+
+**When to use**: When you need to validate data, enforce business rules, or guard against invalid states while maintaining functional composition.
+
+```csharp
+// Simple validation
+Result<int> age = GetAge()
+    .Ensure(age => age >= 0, Error.Validation("NEGATIVE_AGE", "Age cannot be negative"))
+    .Ensure(age => age <= 150, Error.Validation("INVALID_AGE", "Age unrealistic"));
+
+// With error factory for dynamic messages
+Result<User> user = GetUser(userId)
+    .Ensure(u => u.Age >= 18, u => Error.Validation("UNDERAGE", $"User {u.Name} is only {u.Age} years old"))
+    .Ensure(u => u.IsActive, Error.Unauthorized("INACTIVE", "User account is not active"));
+
+// Chaining validations with transformations
+Result<Order> order = GetOrder(orderId)
+    .Ensure(o => o.Items.Any(), Error.Validation("EMPTY_ORDER", "Order must contain at least one item"))
+    .Ensure(o => o.Total > 0, Error.Validation("INVALID_TOTAL", "Order total must be positive"))
+    .Map(o => o.WithTax())
+    .Ensure(o => o.Total <= 10000, Error.Validation("EXCEEDS_LIMIT", "Order exceeds maximum amount"));
+
+// Async validation
+Result<Order> validatedOrder = await GetOrder(orderId)
+    .EnsureAsync(
+        async o => await inventoryService.HasStock(o.Items),
+        Error.Conflict("OUT_OF_STOCK", "Insufficient inventory for order")
+    )
+    .EnsureAsync(
+        async o => await fraudService.IsLegitimate(o),
+        Error.Unauthorized("FRAUD_DETECTED", "Order flagged as suspicious")
+    );
+
+// Complex validation pipeline
+Result<string> processedData = Result<string>.Success("  42  ")
+    .Map(s => s.Trim())
+    .Try(s => int.Parse(s))
+    .Ensure(x => x > 0, Error.Validation("NEGATIVE", "Value must be positive"))
+    .Ensure(x => x < 100, Error.Validation("TOO_LARGE", "Value must be less than 100"))
+    .Map(x => x * 2)
+    .Match(
+        success => $"Result: {success}",
+        error => $"Error: {error.Message}"
+    );
+
+// Multiple guards with different error types
+Result<Transaction> transaction = CreateTransaction(data)
+    .Ensure(t => t.Amount > 0, Error.Validation("INVALID_AMOUNT", "Amount must be positive"))
+    .Ensure(t => t.AccountId != null, Error.Validation("MISSING_ACCOUNT", "Account ID required"))
+    .Ensure(t => HasSufficientFunds(t), Error.Conflict("INSUFFICIENT_FUNDS", "Account balance too low"))
+    .Ensure(t => IsWithinDailyLimit(t), Error.Conflict("LIMIT_EXCEEDED", "Daily transaction limit reached"));
+```
+
+**Key point**: Ensure short-circuits on the first failing predicate and only executes on successful results. Failed results propagate their error without executing any predicates. The error factory variant receives the value for context-aware error messages.
 
 ---
 
