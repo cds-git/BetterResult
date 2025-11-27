@@ -14,6 +14,7 @@ it forces developers to acknowledge and manage errors at every step, resulting i
 - [Why Use The Result Pattern?](#why-use-the-result-pattern)
 - [Usage](#usage)
 - [Operations](#operations)
+  - [Try - Exception Handling](#try---exception-handling)
   - [Bind - Monadic Chaining](#bind---monadic-chaining)
   - [Map - Value Transformation](#map---value-transformation)
   - [MapError - Error Recovery](#maperror---error-recovery)
@@ -268,6 +269,44 @@ await ValidatePermissions(currentUser, targetUserId)
 
 These operations enable functional composition, transformation, side effects, and recovery in a fluent, chainable style. 
 All operations support both synchronous and asynchronous variants, with automatic error propagation.
+
+### Try - Exception Handling
+
+**Purpose**: Wraps exception-throwing operations into Results, bridging the gap between traditional .NET APIs and the Result pattern.
+
+**When to use**: When you need to call code that throws exceptions (parsing, file I/O, database calls, third-party APIs) and want to handle errors functionally.
+
+```csharp
+// Basic exception catching
+Result<int> numberResult = Result<string>.Success("42")
+    .Try(x => int.Parse(x));  // Catches FormatException
+
+// With custom error mapping
+Result<User> userResult = Result<string>.Success(jsonString)
+    .Try(
+        json => JsonSerializer.Deserialize<User>(json),
+        ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}")
+    );
+
+// Chaining with other operations
+Result<int> processedResult = Result<string>.Success("  123  ")
+    .Map(s => s.Trim())
+    .Try(s => int.Parse(s))                    // Can throw
+    .Map(x => x * 2);                          // Only runs if parsing succeeded
+
+// Async operations
+Result<string> fileContent = await Result<string>.Success("data.txt")
+    .TryAsync(async path => await File.ReadAllTextAsync(path));
+
+// Real-world pipeline
+var result = await GetConfigPathAsync()              // Result<string>
+    .TryAsync(async path => await File.ReadAllTextAsync(path))  // Result<string>
+    .Try(json => JsonSerializer.Deserialize<Config>(json))      // Result<Config>
+    .Tap(config => logger.LogInfo($"Loaded config from {config.Source}"))
+    .MapAsync(async config => await ValidateConfigAsync(config));
+```
+
+**Key point**: Try automatically catches all exceptions and converts them to `Error.Unexpected` results with exception metadata. Success values pass through unchanged, and existing errors propagate without executing the operation.
 
 ### Bind - Monadic Chaining
 
