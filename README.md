@@ -22,6 +22,7 @@ it forces developers to acknowledge and manage errors at every step, resulting i
   - [Match - Result Folding](#match---result-folding)
   - [Try - Exception Handling](#try---exception-handling)
   - [Ensure - Validation Guards](#ensure---validation-guards)
+  - [Recover - Error Recovery](#recover---error-recovery)
 - [Error Type](#error-type)
 - [Credits - Inspiration](#credits---inspiration)
 
@@ -623,6 +624,80 @@ Result<Transaction> transaction = CreateTransaction(data)
 ```
 
 **Key point**: Ensure short-circuits on the first failing predicate and only executes on successful results. Failed results propagate their error without executing any predicates. The error factory variant receives the value for context-aware error messages.
+
+### Recover - Error Recovery
+
+**Purpose**: Converts specific failed results back to success by providing recovery logic based on error type or custom predicates, enabling graceful fallbacks and retry scenarios.
+
+**When to use**: When you want to handle specific error types with fallback values or recovery logic, retry failed operations, or provide default values for expected failures.
+
+```csharp
+// Basic recovery with fallback value
+Result<User> user = GetUser(userId)
+    .Recover(ErrorType.NotFound, User.Guest);  // Use guest user if not found
+
+// Recovery based on error type with logic
+Result<Config> config = LoadConfig()
+    .Recover(ErrorType.NotFound, error => LoadDefaultConfig())
+    .Recover(ErrorType.Unavailable, error => LoadCachedConfig());
+
+// Recovery with custom predicate
+Result<string> content = DownloadContent(url)
+    .Recover(
+        error => error.Code == "TIMEOUT" || error.Code == "NETWORK_ERROR",
+        error => RetryDownload(url, maxRetries: 3)
+    );
+
+// Async recovery
+Result<Data> data = await FetchPrimaryDataAsync()
+    .RecoverAsync(
+        ErrorType.Unavailable,
+        async error => await FetchBackupDataAsync()
+    );
+
+// Multiple recovery strategies
+Result<WeatherData> weather = GetWeatherFromPrimaryApi()
+    .Recover(ErrorType.Timeout, _ => GetWeatherFromSecondaryApi())
+    .Recover(ErrorType.Unavailable, _ => GetCachedWeather())
+    .Recover(ErrorType.NotFound, WeatherData.Default);
+
+// Recovery in pipeline
+Result<Order> order = await ValidateOrderAsync(orderId)
+    .BindAsync(o => ProcessPaymentAsync(o))
+    .RecoverAsync(
+        ErrorType.Unavailable,
+        async error => await RetryPaymentWithBackupProviderAsync(orderId)
+    )
+    .TapAsync(o => logger.LogInfo($"Order {o.Id} completed"))
+    .TapErrorAsync(error => logger.LogError($"Order processing failed: {error.Message}"));
+
+// Conditional recovery based on error metadata
+Result<Response> response = await SendRequestAsync(request)
+    .RecoverAsync(
+        error => error.Type == ErrorType.Timeout && 
+                 error.GetMetadata<int>("AttemptNumber") < 3,
+        async error => 
+        {
+            var attempts = error.GetMetadata<int>("AttemptNumber") ?? 0;
+            return await RetryRequestAsync(request, attempts + 1);
+        }
+    );
+
+// Graceful degradation with multiple fallbacks
+Result<ImageData> image = LoadHighResImage(imageId)
+    .TapError(error => logger.LogWarning($"High-res failed: {error.Message}"))
+    .Recover(ErrorType.NotFound, _ => LoadMediumResImage(imageId))
+    .TapError(error => logger.LogWarning($"Medium-res failed: {error.Message}"))
+    .Recover(ErrorType.NotFound, _ => LoadThumbnail(imageId))
+    .TapError(error => logger.LogWarning($"Thumbnail failed: {error.Message}"))
+    .Recover(ErrorType.NotFound, ImageData.Placeholder);
+```
+
+**Key point**: Recover only executes when the result is a failure AND the condition matches (error type or predicate). Success results pass through unchanged. Unlike MapError which examines every error, Recover provides cleaner syntax for specific error handling scenarios.
+
+**Recover vs MapError**:
+- **MapError**: Examines every error, must return a `Result<T>`
+- **Recover**: Only acts on errors matching specific conditions (type or predicate), ideal for targeted fallbacks and retry logic
 
 ---
 
