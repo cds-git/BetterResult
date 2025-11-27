@@ -23,6 +23,9 @@ it forces developers to acknowledge and manage errors at every step, resulting i
   - [Try - Exception Handling](#try---exception-handling)
   - [Ensure - Validation Guards](#ensure---validation-guards)
   - [Recover - Error Recovery](#recover---error-recovery)
+  - [Sequence - Collection Aggregation](#sequence---collection-aggregation)
+  - [Traverse - Transform and Collect](#traverse---transform-and-collect)
+  - [Partition - Separate Successes from Failures](#partition---separate-successes-from-failures)
 - [Error Type](#error-type)
 - [Credits - Inspiration](#credits---inspiration)
 
@@ -698,6 +701,228 @@ Result<ImageData> image = LoadHighResImage(imageId)
 **Recover vs MapError**:
 - **MapError**: Examines every error, must return a `Result<T>`
 - **Recover**: Only acts on errors matching specific conditions (type or predicate), ideal for targeted fallbacks and retry logic
+
+### Sequence - Collection Aggregation
+
+**Purpose**: Aggregates a collection of Results into a single Result containing all values, short-circuiting on the first failure.
+
+**When to use**: When you have a collection of Results and need all operations to succeed (all-or-nothing semantics). Perfect for validation scenarios where you need all checks to pass.
+
+```csharp
+// Basic sequence - all values or first error
+IEnumerable<Result<int>> validations = new[]
+{
+    ValidateAge(user.Age),
+    ValidateEmail(user.Email),
+    ValidatePhone(user.Phone)
+};
+
+Result<IReadOnlyList<int>> allValid = validations.Sequence();
+// Returns: Success with [age, email, phone] if all succeed
+//          OR first validation error
+
+// Sequence with LINQ
+var userIds = new[] { 1, 2, 3, 4, 5 };
+Result<IReadOnlyList<User>> users = userIds
+    .Select(id => GetUser(id))
+    .ToList()
+    .Sequence();
+
+// Async sequence
+IEnumerable<Task<Result<Data>>> asyncTasks = urls.Select(url => FetchDataAsync(url));
+Result<IReadOnlyList<Data>> allData = await asyncTasks.SequenceAsync();
+
+// Validation pipeline
+var validationResults = new[]
+{
+    Validate.NotEmpty(name, "NAME_REQUIRED"),
+    Validate.MinLength(name, 3, "NAME_TOO_SHORT"),
+    Validate.MaxLength(name, 50, "NAME_TOO_LONG")
+};
+
+Result<IReadOnlyList<NoValue>> validated = validationResults.Sequence();
+// If any validation fails, returns that error
+// If all pass, returns success with list of NoValue
+
+// Multi-step operations
+var operations = new[]
+{
+    SaveToDatabase(data),
+    UpdateCache(data),
+    NotifySubscribers(data)
+};
+
+Result<IReadOnlyList<NoValue>> completed = operations.Sequence();
+// All operations must succeed
+```
+
+**Key point**: Sequence short-circuits on the first failure and returns that error immediately. If you need to process all items and collect both successes and failures, use [Partition](#partition---separate-successes-from-failures) instead.
+
+### Traverse - Transform and Collect
+
+**Purpose**: Transforms each element in a collection using a Result-producing function and aggregates the results, short-circuiting on the first failure.
+
+**When to use**: When you need to apply a transformation that might fail to each item in a collection and collect all results (all-or-nothing semantics).
+
+```csharp
+// Basic traverse - transform and collect
+var userIds = new[] { 1, 2, 3, 4, 5 };
+Result<IReadOnlyList<User>> users = Result.Traverse(userIds, id => GetUser(id));
+// Transforms each ID to User, stops on first failure
+
+// Parse and validate
+var inputs = new[] { "42", "100", "256" };
+Result<IReadOnlyList<int>> parsed = Result.Traverse(inputs, s =>
+{
+    if (int.TryParse(s, out var n))
+        return Result<int>.Success(n);
+    return Error.Validation("PARSE_ERROR", $"Invalid number: {s}");
+});
+
+// Async traverse
+var productIds = new[] { 1, 2, 3 };
+Result<IReadOnlyList<Product>> products = await Result
+    .TraverseAsync(productIds, id => FetchProductAsync(id));
+
+// Chained transformations
+var orderIds = new[] { 101, 102, 103 };
+Result<IReadOnlyList<OrderSummary>> summaries = Result.Traverse(orderIds, id => GetOrder(id))
+    .Bind(orders => Result.Traverse(orders, order => order.ValidateAndProcess()))
+    .Map(processed => processed.Select(o => o.ToSummary()).ToList());
+
+// File processing
+var filePaths = new[] { "data1.json", "data2.json", "data3.json" };
+Result<IReadOnlyList<Config>> configs = Result
+    .Traverse(filePaths, path => LoadConfigFromFile(path));
+
+// Database batch insert
+var entities = new[] { entity1, entity2, entity3 };
+Result<IReadOnlyList<int>> insertedIds = await Result
+    .TraverseAsync(entities, e => InsertIntoDatabase(e));
+// Stops on first database error
+
+// Validation with transformation
+var emailAddresses = new[] { "user1@example.com", "user2@example.com", "invalid" };
+Result<IReadOnlyList<Email>> validEmails = Result.Traverse(emailAddresses, email =>
+    Email.TryCreate(email) // Returns Result<Email>
+);
+
+// Nested traverse
+var userGroups = new[] { groupA, groupB, groupC };
+Result<IReadOnlyList<IReadOnlyList<User>>> groupUsers = Result.Traverse(
+    userGroups, 
+    group => Result.Traverse(group.MemberIds, id => GetUser(id))
+);
+```
+
+**Key point**: Traverse is like LINQ's `Select` but for Result-producing functions. It short-circuits on the first failure. Think of it as "map and sequence combined" - it applies a function to each element and aggregates the results.
+
+**Traverse vs Sequence**:
+- **Sequence**: You already have `IEnumerable<Result<T>>`, just aggregate them
+- **Traverse**: You have `IEnumerable<T>` and need to apply a Result-producing function `T → Result<U>`, then aggregate
+
+### Partition - Separate Successes from Failures
+
+**Purpose**: Processes all Results in a collection and separates successes from failures (does NOT short-circuit). Returns both collections for separate handling.
+
+**When to use**: When you want to process all items and handle successes and failures separately (best-effort semantics). Perfect for bulk operations, batch imports, and reporting scenarios.
+
+```csharp
+// Basic partition - separate successes from failures
+IEnumerable<Result<User>> results = userIds.Select(id => ImportUser(id));
+var (imported, failed) = results.Partition();
+
+Console.WriteLine($"Successfully imported: {imported.Count}");
+Console.WriteLine($"Failed to import: {failed.Count}");
+
+// Process successes and failures separately
+foreach (var user in imported)
+{
+    await SendWelcomeEmail(user);
+}
+
+foreach (var error in failed)
+{
+    logger.LogError($"Import failed: {error.Code} - {error.Message}");
+}
+
+// Bulk validation with reporting
+var users = GetAllUsers();
+var validationResults = users.Select(user => ValidateUser(user));
+var (valid, invalid) = validationResults.Partition();
+
+return new ValidationReport
+{
+    ValidCount = valid.Count,
+    InvalidCount = invalid.Count,
+    Errors = invalid.Select(e => new ErrorReport
+    {
+        Code = e.Code,
+        Message = e.Message,
+        Timestamp = DateTime.UtcNow
+    }).ToList()
+};
+
+// Batch processing with partial success
+var orders = GetPendingOrders();
+var processResults = orders.Select(order => ProcessOrder(order));
+var (succeeded, failedOrders) = processResults.Partition();
+
+// Continue with successful orders
+await NotifyCustomers(succeeded);
+await UpdateInventory(succeeded);
+
+// Retry or log failed orders
+foreach (var error in failedOrders)
+{
+    await QueueForRetry(error);
+}
+
+// File processing with error collection
+var files = Directory.GetFiles("./imports");
+var parseResults = files.Select(f => ParseFile(f));
+var (parsed, parseErrors) = parseResults.Partition();
+
+// Process successful parses
+SaveToDatabase(parsed);
+
+// Generate error report for failed parses
+var errorReport = parseErrors.Select(err => new {
+    File = err.GetMetadata<string>("FileName"),
+    Error = err.Message
+});
+
+// Email send with reporting
+var recipients = GetSubscribers();
+var sendResults = recipients.Select(r => SendEmail(r));
+var (sent, failed) = sendResults.Partition();
+
+return new EmailCampaignResult
+{
+    TotalSent = sent.Count,
+    TotalFailed = failed.Count,
+    FailureDetails = failed.Select(e => new FailureDetail
+    {
+        Recipient = e.GetMetadata<string>("Recipient"),
+        Reason = e.Message
+    })
+};
+
+// Data migration with reporting
+var records = await GetLegacyRecords();
+var migrationResults = records.Select(r => MigrateRecord(r));
+var (migrated, migrationFailed) = migrationResults.Partition();
+
+Console.WriteLine($"Migration complete:");
+Console.WriteLine($"  ✓ Migrated: {migrated.Count}");
+Console.WriteLine($"  ✗ Failed: {migrationFailed.Count}");
+```
+
+**Key point**: Unlike Sequence and Traverse which short-circuit on the first error (all-or-nothing), Partition processes the entire collection and separates successes from failures (best-effort). Use Partition when you want to handle partial success scenarios.
+
+**Partition vs Sequence/Traverse**:
+- **Sequence/Traverse**: Short-circuit on first error ("all or nothing") - returns `Result<IEnumerable<T>>`
+- **Partition**: Process everything ("best effort") - returns `(IReadOnlyList<T> Successes, IReadOnlyList<Error> Failures)`
 
 ---
 
