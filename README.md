@@ -26,6 +26,8 @@ it forces developers to acknowledge and manage errors at every step, resulting i
   - [Sequence - Collection Aggregation](#sequence---collection-aggregation)
   - [Traverse - Transform and Collect](#traverse---transform-and-collect)
   - [Partition - Separate Successes from Failures](#partition---separate-successes-from-failures)
+  - [Combine - Combine Multiple Independent Results](#combine---combine-multiple-independent-results)
+  - [Zip - Fluent Result Combination](#zip---fluent-result-combination)
 - [Error Type](#error-type)
 - [Credits - Inspiration](#credits---inspiration)
 
@@ -923,6 +925,196 @@ Console.WriteLine($"  ✗ Failed: {migrationFailed.Count}");
 **Partition vs Sequence/Traverse**:
 - **Sequence/Traverse**: Short-circuit on first error ("all or nothing") - returns `Result<IEnumerable<T>>`
 - **Partition**: Process everything ("best effort") - returns `(IReadOnlyList<T> Successes, IReadOnlyList<Error> Failures)`
+
+### Combine - Combine Multiple Independent Results
+
+**Purpose**: Combines 2-8 independent Results into a single Result, applying an optional selector function. Short-circuits on the first failure. Ideal for parallel independent operations.
+
+**When to use**: When you have multiple independent Results (e.g., from parallel async operations) and need all to succeed. Use Combine for static, declarative combination of multiple results.
+
+```csharp
+// Basic combine - 2 parameters
+var user = GetUser(userId);
+var settings = GetSettings(userId);
+var combined = Result.Combine(user, settings);
+// Returns: Result<(User, Settings)>
+
+// With selector - transform immediately
+var result = Result.Combine(
+    user,
+    settings,
+    (u, s) => new Profile { User = u, Settings = s }
+);
+
+// Combining 3+ results
+var dashboard = Result.Combine(
+    GetUser(userId),
+    GetSettings(userId),
+    GetPermissions(userId),
+    (u, s, p) => new Dashboard(u, s, p)
+);
+
+// Parallel async operations
+var userTask = GetUserAsync(userId);
+var settingsTask = GetSettingsAsync(userId);
+var permissionsTask = GetPermissionsAsync(userId);
+
+await Task.WhenAll(userTask, settingsTask, permissionsTask);
+
+var result = Result.Combine(
+    await userTask,
+    await settingsTask,
+    await permissionsTask,
+    (u, s, p) => new Dashboard(u, s, p)
+);
+
+// Validation scenario - all must pass
+var validation = Result.Combine(
+    ValidateName(name),
+    ValidateEmail(email),
+    ValidateAge(age),
+    ValidatePhone(phone),
+    (n, e, a, p) => new UserRegistration(n, e, a, p)
+);
+
+// Form validation with 6+ fields
+var form = Result.Combine(
+    ValidateField1(data.Field1),
+    ValidateField2(data.Field2),
+    ValidateField3(data.Field3),
+    ValidateField4(data.Field4),
+    ValidateField5(data.Field5),
+    ValidateField6(data.Field6),
+    (f1, f2, f3, f4, f5, f6) => new FormData(f1, f2, f3, f4, f5, f6)
+);
+
+// Without selector - returns tuple
+var tuple = Result.Combine(
+    GetFirstName(),
+    GetLastName(),
+    GetAge()
+);
+// Returns: Result<(string, string, int)>
+if (tuple.IsSuccess)
+{
+    var (firstName, lastName, age) = tuple.Value;
+}
+
+// Combining different types
+var report = Result.Combine(
+    FetchSalesData(),      // Result<SalesData>
+    FetchInventoryData(),  // Result<InventoryData>
+    FetchCustomerData(),   // Result<CustomerData>
+    CalculateMetrics(),    // Result<Metrics>
+    (sales, inventory, customers, metrics) => new MonthlyReport
+    {
+        Sales = sales,
+        Inventory = inventory,
+        Customers = customers,
+        Metrics = metrics
+    }
+);
+
+// CombineAsync - with async selector
+var enriched = await Result.CombineAsync(
+    GetUser(userId),
+    GetSettings(userId),
+    async (u, s) =>
+    {
+        await LogAccess(u.Id);
+        return new Profile { User = u, Settings = s };
+    }
+);
+
+// CombineAsync - processing multiple results asynchronously
+var report = await Result.CombineAsync(
+    FetchSalesData(),
+    FetchInventoryData(),
+    FetchCustomerData(),
+    async (sales, inventory, customers) =>
+    {
+        // Perform async aggregation/processing
+        var metrics = await CalculateMetricsAsync(sales, inventory, customers);
+        return new Report(sales, inventory, customers, metrics);
+    }
+);
+```
+
+**Key point**: Combine is static and declarative - pass all Results at once. It short-circuits on the first failure, returning that error immediately. Supports 2-8 parameters with optional selector functions. Use `CombineAsync` when your selector function is async.
+
+### Zip - Fluent Result Combination
+
+**Purpose**: Fluently combines two Results in a method chain. A fluent wrapper around `Combine` for 2 parameters, enabling sequential chaining patterns.
+
+**When to use**: When you want to build up a result by chaining combinations fluently, or when one result depends on the previous. Use Zip for fluent, sequential composition.
+
+```csharp
+// Basic zip - fluent chaining
+var result = GetUser(userId)
+    .Zip(GetSettings(userId), (user, settings) => new Profile(user, settings));
+
+// Multiple chained zips
+var dashboard = GetUser(userId)
+    .Zip(GetSettings(userId), (u, s) => (User: u, Settings: s))
+    .Zip(GetPermissions(userId), (us, p) => new Dashboard(us.User, us.Settings, p));
+
+// Async chaining
+var result = await GetUserAsync(userId)
+    .Zip(await GetSettingsAsync(userId), (u, s) => new Profile(u, s));
+
+// ZipAsync with async selector
+var result = await GetUserAsync(userId)
+    .ZipAsync(GetSettingsAsync(userId), async (u, s) =>
+    {
+        await LogProfileCreation(u.Id);
+        return new Profile(u, s);
+    });
+
+// Building complex objects fluently
+var order = GetProduct(productId)
+    .Zip(GetPrice(productId), (product, price) => (product, price))
+    .Zip(GetInventory(productId), (pp, inventory) => (pp.product, pp.price, inventory))
+    .Zip(GetShipping(shippingId), (ppi, shipping) => new Order
+    {
+        Product = ppi.product,
+        Price = ppi.price,
+        Available = ppi.inventory > 0,
+        Shipping = shipping
+    });
+
+// Without selector - returns tuple
+var tuple = GetFirstName()
+    .Zip(GetLastName());
+// Returns: Result<(string, string)>
+
+// Mixing sync and async
+var result = await GetUserAsync(userId)
+    .Zip(GetSettings(userId), (u, s) => new Profile(u, s));
+
+// Task extension - both are tasks
+var result = await GetUserAsync(userId)
+    .Zip(GetSettingsAsync(userId), (u, s) => new Profile(u, s));
+
+// Progressive building in pipeline
+var result = ValidateInput(data)
+    .Map(validated => Transform(validated))
+    .Zip(GetConfiguration(), (transformed, config) => Apply(transformed, config))
+    .Bind(SaveToDatabase);
+
+// Combining with other operations
+var profile = GetUser(userId)
+    .Tap(user => logger.LogInfo($"Retrieved user: {user.Name}"))
+    .Zip(GetSettings(userId), (u, s) => new Profile(u, s))
+    .TapError(error => logger.LogError($"Failed to create profile: {error.Message}"));
+```
+
+**Key point**: Zip is fluent and sequential - chain `.Zip()` calls for readability. Perfect for building complex objects step-by-step. All async variants included for seamless async/await integration.
+
+**Combine vs Zip**:
+- **Combine**: Static method for 2-8 parameters - `Result.Combine(r1, r2, r3, ...)`
+- **Zip**: Fluent extension for 2 parameters - `r1.Zip(r2, ...)` 
+- **Use Combine** when you have 3+ results to combine at once
+- **Use Zip** when you want to chain combinations fluently or build progressively
 
 ---
 
