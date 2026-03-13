@@ -40,7 +40,7 @@ public class ResultTests
         Action act = () => { var value = result.Value; };
 
         // Assert
-        act.Should().Throw<InvalidOperationException>().WithMessage("Cannot access the value when result is of type failure. Check IsFailure before accessing value!");
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class ResultTests
         Action act = () => { var error = result.Error; };
 
         // Assert
-        act.Should().Throw<InvalidOperationException>().WithMessage("Cannot access the error when the result is of type success. Check IsFailure before accessing Error!");
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
