@@ -46,7 +46,7 @@ public partial record Result<T>
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when no value is present.</exception>
     public T Value => IsFailure
-        ? throw new InvalidOperationException("Cannot access the value when result is of type failure. Check IsFailure before accessing value!")
+        ? throw new InvalidOperationException($"Cannot access the value when result is of type failure. Check IsFailure before accessing value! {Error}")
         : _value!;
 
     /// <summary>
