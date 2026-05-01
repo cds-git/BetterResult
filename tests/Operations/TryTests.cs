@@ -47,7 +47,7 @@ public class TryTests
     }
 
     [Fact]
-    public void Try_Should_IncludeExceptionMetadata_When_OperationThrows()
+    public void Try_Should_IncludeExceptionTypeButNotStackTrace_When_OperationThrows()
     {
         // Arrange
         var result = Result<string>.Success("not a number");
@@ -58,7 +58,7 @@ public class TryTests
         // Assert
         transformed.IsFailure.Should().BeTrue();
         transformed.Error.GetMetadata<string>("ExceptionType").Should().Be("FormatException");
-        transformed.Error.GetMetadata<string>("StackTrace").Should().NotBeNullOrEmpty();
+        transformed.Error.Metadata.Should().NotContainKey("StackTrace");
     }
 
     [Fact]

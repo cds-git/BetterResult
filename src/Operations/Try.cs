@@ -21,8 +21,7 @@ public partial record Result<T>
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Error.Unexpected("EXCEPTION", ex.Message)
-                .WithMetadata("ExceptionType", ex.GetType().Name)
-                .WithMetadata("StackTrace", ex.StackTrace ?? string.Empty);
+                .WithMetadata("ExceptionType", ex.GetType().Name);
         }
     }
 
@@ -68,8 +67,7 @@ public partial record Result<T>
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Error.Unexpected("EXCEPTION", ex.Message)
-                .WithMetadata("ExceptionType", ex.GetType().Name)
-                .WithMetadata("StackTrace", ex.StackTrace ?? string.Empty);
+                .WithMetadata("ExceptionType", ex.GetType().Name);
         }
     }
 

@@ -553,6 +553,15 @@ Result<User> userResult = Result<string>.Success(jsonString)
         ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}")
     );
 
+// Opt-in stack traces (NOT included by default — see security note below)
+Result<int> withStackTrace = Result<string>.Success("not a number")
+    .Try(
+        x => int.Parse(x),
+        ex => Error.Unexpected("EXCEPTION", ex.Message)
+            .WithMetadata("ExceptionType", ex.GetType().Name)
+            .WithMetadata("StackTrace", ex.StackTrace ?? string.Empty)
+    );
+
 // Chaining with other operations
 Result<int> processedResult = Result<string>.Success("  123  ")
     .Map(s => s.Trim())
@@ -571,7 +580,11 @@ var result = await GetConfigPathAsync()              // Result<string>
     .MapAsync(async config => await ValidateConfigAsync(config));
 ```
 
-**Key point**: Try automatically catches all exceptions and converts them to `Error.Unexpected` results with exception metadata. Success values pass through unchanged, and existing errors propagate without executing the operation.
+**Key points**:
+
+- The default `Try` converts caught exceptions to `Error.Unexpected("EXCEPTION", ex.Message)` with `ExceptionType` in the metadata. **Stack traces are deliberately not included** — they leak file paths, line numbers, and the internal call hierarchy, which is a CWE-209 information-disclosure risk if errors cross a trust boundary (API responses, untrusted log sinks, third-party integrations). If you need the stack trace (e.g. for an internal log), use the `errorMapper` overload as shown above.
+- `OperationCanceledException` and `TaskCanceledException` are **not** caught — cancellation propagates so cooperative cancellation keeps working. Wrap the whole pipeline in your own `try/catch` if you need to convert cancellation into a Result.
+- Success values pass through unchanged; existing errors propagate without executing the operation.
 
 ### Ensure - Validation Guards
 
