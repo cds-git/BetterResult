@@ -17,6 +17,20 @@ public partial record Result<T>
     }
 
     /// <summary>
+    /// Attempts to recover from a failure by applying a recovery function if the error matches any of the specified types.
+    /// If the current result is successful or the error type isn't in the set, the result passes through unchanged.
+    /// </summary>
+    /// <param name="errorTypes">The error types to match for recovery.</param>
+    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
+    /// <returns>The recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    public Result<T> Recover(IEnumerable<ErrorType> errorTypes, Func<Error, Result<T>> recovery)
+    {
+        if (IsSuccess) return this;
+        if (!errorTypes.Contains(Error.Type)) return this;
+        return recovery(Error);
+    }
+
+    /// <summary>
     /// Attempts to recover from a failure by applying a recovery function if the error satisfies the predicate.
     /// If the current result is successful or the predicate returns false, the result passes through unchanged.
     /// </summary>
@@ -45,6 +59,20 @@ public partial record Result<T>
     }
 
     /// <summary>
+    /// Attempts to recover from a failure by providing a fallback value if the error matches any of the specified types.
+    /// If the current result is successful or the error type isn't in the set, the result passes through unchanged.
+    /// </summary>
+    /// <param name="errorTypes">The error types to match for recovery.</param>
+    /// <param name="fallbackValue">The fallback value to use for recovery.</param>
+    /// <returns>A successful result with the fallback value if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    public Result<T> Recover(IEnumerable<ErrorType> errorTypes, T fallbackValue)
+    {
+        if (IsSuccess) return this;
+        if (!errorTypes.Contains(Error.Type)) return this;
+        return fallbackValue;
+    }
+
+    /// <summary>
     /// Asynchronously attempts to recover from a failure by applying a recovery function if the error matches the specified type.
     /// If the current result is successful or the error type doesn't match, the result passes through unchanged.
     /// </summary>
@@ -55,6 +83,20 @@ public partial record Result<T>
     {
         if (IsSuccess) return this;
         if (Error.Type != errorType) return this;
+        return await recoveryAsync(Error).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Asynchronously attempts to recover from a failure by applying a recovery function if the error matches any of the specified types.
+    /// If the current result is successful or the error type isn't in the set, the result passes through unchanged.
+    /// </summary>
+    /// <param name="errorTypes">The error types to match for recovery.</param>
+    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
+    /// <returns>A task containing the recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    public async Task<Result<T>> RecoverAsync(IEnumerable<ErrorType> errorTypes, Func<Error, Task<Result<T>>> recoveryAsync)
+    {
+        if (IsSuccess) return this;
+        if (!errorTypes.Contains(Error.Type)) return this;
         return await recoveryAsync(Error).ConfigureAwait(false);
     }
 
@@ -96,6 +138,23 @@ public static class RecoverExtensions
     }
 
     /// <summary>
+    /// Asynchronously recovers from a failure by applying a recovery function if the error matches any of the specified types.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="resultTask">The task containing the result to recover from.</param>
+    /// <param name="errorTypes">The error types to match for recovery.</param>
+    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
+    /// <returns>A task containing the recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    public static async Task<Result<T>> RecoverAsync<T>(
+        this Task<Result<T>> resultTask,
+        IEnumerable<ErrorType> errorTypes,
+        Func<Error, Result<T>> recovery)
+    {
+        var result = await resultTask.ConfigureAwait(false);
+        return result.Recover(errorTypes, recovery);
+    }
+
+    /// <summary>
     /// Asynchronously recovers from a failure by applying a recovery function if the error satisfies the predicate.
     /// </summary>
     /// <typeparam name="T">The type of the value in the result.</typeparam>
@@ -130,6 +189,23 @@ public static class RecoverExtensions
     }
 
     /// <summary>
+    /// Asynchronously recovers from a failure by providing a fallback value if the error matches any of the specified types.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="resultTask">The task containing the result to recover from.</param>
+    /// <param name="errorTypes">The error types to match for recovery.</param>
+    /// <param name="fallbackValue">The fallback value to use for recovery.</param>
+    /// <returns>A task containing a successful result with the fallback value if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    public static async Task<Result<T>> RecoverAsync<T>(
+        this Task<Result<T>> resultTask,
+        IEnumerable<ErrorType> errorTypes,
+        T fallbackValue)
+    {
+        var result = await resultTask.ConfigureAwait(false);
+        return result.Recover(errorTypes, fallbackValue);
+    }
+
+    /// <summary>
     /// Asynchronously recovers from a failure by applying an asynchronous recovery function if the error matches the specified type.
     /// </summary>
     /// <typeparam name="T">The type of the value in the result.</typeparam>
@@ -144,6 +220,23 @@ public static class RecoverExtensions
     {
         var result = await resultTask.ConfigureAwait(false);
         return await result.RecoverAsync(errorType, recoveryAsync).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Asynchronously recovers from a failure by applying an asynchronous recovery function if the error matches any of the specified types.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="resultTask">The task containing the result to recover from.</param>
+    /// <param name="errorTypes">The error types to match for recovery.</param>
+    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
+    /// <returns>A task containing the recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    public static async Task<Result<T>> RecoverAsync<T>(
+        this Task<Result<T>> resultTask,
+        IEnumerable<ErrorType> errorTypes,
+        Func<Error, Task<Result<T>>> recoveryAsync)
+    {
+        var result = await resultTask.ConfigureAwait(false);
+        return await result.RecoverAsync(errorTypes, recoveryAsync).ConfigureAwait(false);
     }
 
     /// <summary>

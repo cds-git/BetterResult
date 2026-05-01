@@ -679,6 +679,17 @@ Result<WeatherData> weather = GetWeatherFromPrimaryApi()
     .Recover(ErrorType.Unavailable, _ => GetCachedWeather())
     .Recover(ErrorType.NotFound, WeatherData.Default);
 
+// Handle several error types with one handler
+Result<Data> data = await FetchDataAsync()
+    .RecoverAsync(
+        [ErrorType.Timeout, ErrorType.Unavailable, ErrorType.Conflict],
+        async error => await FetchFromBackupAsync()
+    );
+
+// Same with a fallback value
+Result<User> user = GetUser(userId)
+    .Recover([ErrorType.NotFound, ErrorType.Unauthorized], User.Guest);
+
 // Recovery in pipeline
 Result<Order> order = await ValidateOrderAsync(orderId)
     .BindAsync(o => ProcessPaymentAsync(o))
@@ -711,11 +722,11 @@ Result<ImageData> image = LoadHighResImage(imageId)
     .Recover(ErrorType.NotFound, ImageData.Placeholder);
 ```
 
-**Key point**: Recover only executes when the result is a failure AND the condition matches (error type or predicate). Success results pass through unchanged. Unlike MapError which examines every error, Recover provides cleaner syntax for specific error handling scenarios.
+**Key point**: Recover only executes when the result is a failure AND the condition matches. Success results pass through unchanged. The condition can be a single `ErrorType`, a set of `ErrorType`s (`IEnumerable<ErrorType>`), or a custom `Func<Error, bool>` predicate. The recovery itself can either return a successful value or another `Result<T>` (which may itself be a failure — useful for "try fallback, but it might also fail" patterns).
 
 **Recover vs MapError**:
-- **MapError**: Examines every error, must return a `Result<T>`
-- **Recover**: Only acts on errors matching specific conditions (type or predicate), ideal for targeted fallbacks and retry logic
+- **MapError**: Examines *every* error, must return a `Result<T>`. Use when you want to transform/wrap all errors uniformly.
+- **Recover**: Acts only on errors matching a filter (single type, multi-type, or predicate). Use when you want to handle specific error types — same handler can serve several errors via the multi-type overload.
 
 ### Sequence - Collection Aggregation
 
@@ -1138,9 +1149,9 @@ The `Error` struct encapsulates failure information with rich metadata and a var
 ### Properties
 
 - `ErrorType Type` – Category of the error (e.g., `Failure`, `Unexpected`, `Validation`, etc.).
-- `string Code` – Error code that can be used to decifer it e.g. HTTP status codes or localization key.
+- `string Code` – Error code that can be used to decipher it (e.g. HTTP status codes or localization key).
 - `string Message` – Error description.
-- `Dictionary<string, object>? Metadata` – Optional contextual data.
+- `IReadOnlyDictionary<string, object>? Metadata` – Optional contextual data. Read-only by design; use `WithMetadata(...)` to produce a new error with added/updated entries rather than mutating in place.
 
 ### Metadata Accessors
 
