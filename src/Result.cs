@@ -18,6 +18,11 @@ public partial record Result<T>
 
     private Result(Error error)
     {
+        if (error.Code is null)
+            throw new ArgumentException(
+                "Cannot create a failure Result from a default(Error). Construct the Error via one of the factory methods (Error.Failure, Error.Validation, Error.Create, ...).",
+                nameof(error));
+
         IsFailure = true;
         _value = default;
         _error = error;
