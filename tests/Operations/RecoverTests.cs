@@ -352,4 +352,202 @@ public class RecoverTests
         // Assert
         final.Should().Be("Result: 0");
     }
+
+    // Multi-error-type overloads
+
+    [Fact]
+    public void Recover_WithErrorTypes_Should_PreserveSuccess_When_ResultIsSuccess()
+    {
+        // Arrange
+        var result = Result<int>.Success(42);
+
+        // Act
+        var recovered = result.Recover(
+            [ErrorType.NotFound, ErrorType.Unauthorized],
+            err => Result<int>.Success(99));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void Recover_WithErrorTypes_Should_Recover_When_ErrorTypeInSet()
+    {
+        // Arrange
+        var error = Error.Unauthorized("UNAUTH", "Access denied");
+        var result = Result<int>.Failure(error);
+
+        // Act
+        var recovered = result.Recover(
+            [ErrorType.NotFound, ErrorType.Unauthorized],
+            err => Result<int>.Success(99));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public void Recover_WithErrorTypes_Should_PropagateError_When_ErrorTypeNotInSet()
+    {
+        // Arrange
+        var error = Error.Validation("INVALID", "Bad input");
+        var result = Result<int>.Failure(error);
+
+        // Act
+        var recovered = result.Recover(
+            [ErrorType.NotFound, ErrorType.Unauthorized],
+            err => Result<int>.Success(99));
+
+        // Assert
+        recovered.IsFailure.Should().BeTrue();
+        recovered.Error.Should().Be(error);
+    }
+
+    [Fact]
+    public void Recover_WithErrorTypes_FallbackValue_Should_PreserveSuccess_When_ResultIsSuccess()
+    {
+        // Arrange
+        var result = Result<int>.Success(42);
+
+        // Act
+        var recovered = result.Recover([ErrorType.NotFound, ErrorType.Unauthorized], 99);
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void Recover_WithErrorTypes_FallbackValue_Should_Recover_When_ErrorTypeInSet()
+    {
+        // Arrange
+        var error = Error.NotFound("NOT_FOUND", "Missing");
+        var result = Result<int>.Failure(error);
+
+        // Act
+        var recovered = result.Recover([ErrorType.NotFound, ErrorType.Unauthorized], 99);
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public void Recover_WithErrorTypes_FallbackValue_Should_PropagateError_When_ErrorTypeNotInSet()
+    {
+        // Arrange
+        var error = Error.Validation("INVALID", "Bad input");
+        var result = Result<int>.Failure(error);
+
+        // Act
+        var recovered = result.Recover([ErrorType.NotFound, ErrorType.Unauthorized], 99);
+
+        // Assert
+        recovered.IsFailure.Should().BeTrue();
+        recovered.Error.Should().Be(error);
+    }
+
+    [Fact]
+    public void Recover_WithErrorTypes_Should_HandleSeveralErrorsWithOneHandler()
+    {
+        // Arrange — three failures, three different types, all retryable, one shared handler
+        ErrorType[] retryable = [ErrorType.Timeout, ErrorType.Unavailable, ErrorType.Conflict];
+
+        var timeout = Result<int>.Failure(Error.Timeout("T", "timed out")).Recover(retryable, _ => 1);
+        var unavailable = Result<int>.Failure(Error.Unavailable("U", "down")).Recover(retryable, _ => 1);
+        var conflict = Result<int>.Failure(Error.Conflict("C", "conflict")).Recover(retryable, _ => 1);
+        var validation = Result<int>.Failure(Error.Validation("V", "invalid")).Recover(retryable, _ => 1);
+
+        // Assert
+        timeout.IsSuccess.Should().BeTrue();
+        unavailable.IsSuccess.Should().BeTrue();
+        conflict.IsSuccess.Should().BeTrue();
+        validation.IsFailure.Should().BeTrue(); // not in the retryable set
+    }
+
+    [Fact]
+    public async Task RecoverAsync_WithErrorTypes_Should_PreserveSuccess_When_ResultIsSuccess()
+    {
+        // Arrange
+        var result = Result<int>.Success(42);
+
+        // Act
+        var recovered = await result.RecoverAsync(
+            [ErrorType.NotFound, ErrorType.Unauthorized],
+            err => Task.FromResult(Result<int>.Success(99)));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_WithErrorTypes_Should_Recover_When_ErrorTypeInSet()
+    {
+        // Arrange
+        var error = Error.NotFound("NOT_FOUND", "Missing");
+        var result = Result<int>.Failure(error);
+
+        // Act
+        var recovered = await result.RecoverAsync(
+            [ErrorType.NotFound, ErrorType.Unauthorized],
+            err => Task.FromResult(Result<int>.Success(99)));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_TaskResult_WithErrorTypes_Should_Recover()
+    {
+        // Arrange
+        var error = Error.Unauthorized("UNAUTH", "denied");
+        var resultTask = Task.FromResult(Result<int>.Failure(error));
+
+        // Act
+        var recovered = await resultTask.RecoverAsync(
+            [ErrorType.NotFound, ErrorType.Unauthorized],
+            err => Result<int>.Success(99));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_TaskResult_WithErrorTypes_FallbackValue_Should_Recover()
+    {
+        // Arrange
+        var error = Error.NotFound("NOT_FOUND", "Missing");
+        var resultTask = Task.FromResult(Result<int>.Failure(error));
+
+        // Act
+        var recovered = await resultTask.RecoverAsync(
+            [ErrorType.NotFound, ErrorType.Unauthorized],
+            99);
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_TaskResult_WithErrorTypes_AsyncRecovery_Should_Recover()
+    {
+        // Arrange
+        var error = Error.Timeout("TIMEOUT", "timed out");
+        var resultTask = Task.FromResult(Result<int>.Failure(error));
+
+        // Act
+        var recovered = await resultTask.RecoverAsync(
+            [ErrorType.Timeout, ErrorType.Unavailable],
+            err => Task.FromResult(Result<int>.Success(99)));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
 }
