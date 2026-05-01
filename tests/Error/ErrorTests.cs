@@ -72,10 +72,10 @@ public class ErrorTests
         var error = Error.Failure("E001", "Some error");
 
         // Act
-        var updatedError = error.WithMetadata(1000); // Will use "Int32" as key
+        var updatedError = error.WithMetadata(1000); // Will use "System.Int32" as key
 
         // Assert
-        updatedError.Metadata.Should().ContainKey("Int32").WhoseValue.Should().Be(1000);
+        updatedError.Metadata.Should().ContainKey("System.Int32").WhoseValue.Should().Be(1000);
     }
 
     [Fact]

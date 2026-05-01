@@ -67,7 +67,8 @@ public static class ErrorExtensions
     }
 
     /// <summary>
-    /// Creates a new <see cref="Error"/> by adding or updating metadata using the type name of the metadata as the key.
+    /// Creates a new <see cref="Error"/> by adding or updating metadata using the full type name of the metadata as the key.
+    /// The fully-qualified name (namespace + type) is used to avoid silent collisions between types that share a simple name across namespaces.
     /// </summary>
     /// <param name="error">The current error.</param>
     /// <param name="metadata">The metadata value to add or update.</param>
@@ -75,8 +76,10 @@ public static class ErrorExtensions
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata<T>(this Error error, T? metadata)
     {
-        return metadata is not null
-            ? error.WithMetadata(typeof(T).Name, metadata)
-            : error;
+        if (metadata is null)
+            return error;
+
+        var key = typeof(T).FullName ?? typeof(T).Name;
+        return error.WithMetadata(key, metadata);
     }
 }
