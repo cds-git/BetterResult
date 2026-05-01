@@ -23,7 +23,7 @@ public static partial class Result
                 return result.Error;
             list.Add(result.Value);
         }
-        return list;
+        return list.AsReadOnly();
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public static partial class Result
                 return result.Error;
             list.Add(result.Value);
         }
-        return list;
+        return list.AsReadOnly();
     }
 
     /// <summary>

@@ -26,7 +26,7 @@ public static class PartitionExtensions
                 failures.Add(result.Error);
         }
 
-        return (successes, failures);
+        return (successes.AsReadOnly(), failures.AsReadOnly());
     }
 
     /// <summary>

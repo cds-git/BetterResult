@@ -21,7 +21,7 @@ public static class SequenceExtensions
                 return result.Error;
             list.Add(result.Value);
         }
-        return list;
+        return list.AsReadOnly();
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ public static class SequenceExtensions
                 return result.Error;
             list.Add(result.Value);
         }
-        return list;
+        return list.AsReadOnly();
     }
 
     /// <summary>
