@@ -11,7 +11,7 @@ public readonly partial record struct Error
     public static Error Failure(
        string code = "General.Failure",
        string message = "Failure",
-       Dictionary<string, object>? metadata = null) =>
+       IReadOnlyDictionary<string, object>? metadata = null) =>
            new(ErrorType.Failure, code, message, metadata);
 
     /// <summary>
@@ -23,7 +23,7 @@ public readonly partial record struct Error
     public static Error Unexpected(
         string code = "General.Unexpected",
         string message = "An unexpected error has occurred.",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.Unexpected, code, message, metadata);
 
     /// <summary>
@@ -35,7 +35,7 @@ public readonly partial record struct Error
     public static Error Validation(
         string code = "General.Validation",
         string message = "Validation error has occurred.",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.Validation, code, message, metadata);
 
     /// <summary>
@@ -47,7 +47,7 @@ public readonly partial record struct Error
     public static Error NotFound(
         string code = "General.NotFound",
         string message = "Not Found",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.NotFound, code, message, metadata);
 
     /// <summary>
@@ -59,7 +59,7 @@ public readonly partial record struct Error
     public static Error Conflict(
         string code = "General.Conflict",
         string message = "Conflict",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.Conflict, code, message, metadata);
 
     /// <summary>
@@ -71,7 +71,7 @@ public readonly partial record struct Error
     public static Error Unauthorized(
         string code = "General.Unauthorized",
         string message = "Unauthorized",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.Unauthorized, code, message, metadata);
 
     /// <summary>
@@ -83,7 +83,7 @@ public readonly partial record struct Error
     public static Error Unavailable(
         string code = "General.Unavailable",
         string message = "The requested service was unavailable",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.Unavailable, code, message, metadata);
 
     /// <summary>
@@ -95,7 +95,7 @@ public readonly partial record struct Error
     public static Error Timeout(
         string code = "General.Timeout",
         string message = "Timeout",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.Timeout, code, message, metadata);
 
     /// <summary>
@@ -110,6 +110,6 @@ public readonly partial record struct Error
         ErrorType type,
         string code = "General.Custom",
         string message = "Custom error occurred",
-        Dictionary<string, object>? metadata = null) =>
+        IReadOnlyDictionary<string, object>? metadata = null) =>
             new(type, code, message, metadata);
 }

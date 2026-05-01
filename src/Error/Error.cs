@@ -5,12 +5,23 @@ namespace BetterResult;
 /// </summary>
 public readonly partial record struct Error
 {
-    private Error(ErrorType type, string code, string message, Dictionary<string, object>? metadata)
+    private Error(ErrorType type, string code, string message, IReadOnlyDictionary<string, object>? metadata)
     {
         Type = type;
         Code = code;
         Message = message;
-        Metadata = metadata;
+
+        if (metadata is null)
+        {
+            Metadata = null;
+        }
+        else
+        {
+            var copy = new Dictionary<string, object>(metadata.Count);
+            foreach (var kvp in metadata)
+                copy[kvp.Key] = kvp.Value;
+            Metadata = copy;
+        }
     }
 
     /// <summary>
@@ -31,7 +42,7 @@ public readonly partial record struct Error
     /// <summary>
     /// Gets the metadata.
     /// </summary>
-    public Dictionary<string, object>? Metadata { get; }
+    public IReadOnlyDictionary<string, object>? Metadata { get; }
 
     /// <summary>
     /// Retrieves the metadata value associated with the given key, or returns <c>default(T)</c> if the key is not present.

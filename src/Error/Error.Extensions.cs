@@ -26,11 +26,12 @@ public static class ErrorExtensions
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata(this Error error, Dictionary<string, object>? metadata)
     {
-        var mergedMetadata = error.Metadata is null ? [] : new Dictionary<string, object>(error.Metadata);
+        var mergedMetadata = CopyOrEmpty(error.Metadata);
 
-        foreach (var kvp in metadata ?? [])
+        if (metadata is not null)
         {
-            mergedMetadata[kvp.Key] = kvp.Value;  // Override existing keys
+            foreach (var kvp in metadata)
+                mergedMetadata[kvp.Key] = kvp.Value;  // Override existing keys
         }
 
         return Error.Create(error.Type, error.Code, error.Message, mergedMetadata);
@@ -46,12 +47,23 @@ public static class ErrorExtensions
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata<T>(this Error error, string key, T? metadata)
     {
-        var mergedMetadata = error.Metadata is null ? [] : new Dictionary<string, object>(error.Metadata);
+        var mergedMetadata = CopyOrEmpty(error.Metadata);
 
         if (metadata is not null)
             mergedMetadata[key] = metadata; // Override existing keys
 
         return Error.Create(error.Type, error.Code, error.Message, mergedMetadata);
+    }
+
+    private static Dictionary<string, object> CopyOrEmpty(IReadOnlyDictionary<string, object>? source)
+    {
+        if (source is null)
+            return [];
+
+        var copy = new Dictionary<string, object>(source.Count);
+        foreach (var kvp in source)
+            copy[kvp.Key] = kvp.Value;
+        return copy;
     }
 
     /// <summary>
