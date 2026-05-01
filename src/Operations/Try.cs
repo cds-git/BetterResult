@@ -18,7 +18,7 @@ public partial record Result<T>
         {
             return operation(Value);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Error.Unexpected("EXCEPTION", ex.Message)
                 .WithMetadata("ExceptionType", ex.GetType().Name)
@@ -43,7 +43,7 @@ public partial record Result<T>
         {
             return operation(Value);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return errorMapper(ex);
         }
@@ -65,7 +65,7 @@ public partial record Result<T>
         {
             return await operation(Value).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Error.Unexpected("EXCEPTION", ex.Message)
                 .WithMetadata("ExceptionType", ex.GetType().Name)
@@ -90,7 +90,7 @@ public partial record Result<T>
         {
             return await operation(Value).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return errorMapper(ex);
         }
