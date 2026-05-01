@@ -72,7 +72,7 @@ public readonly partial record struct Error
     /// </summary>
     /// <typeparam name="T">The type of the metadata value to search for.</typeparam>
     /// <returns>
-    /// The first metadata value cast to <typeparamref name="T"/>, 
+    /// The first metadata value cast to <typeparamref name="T"/>,
     /// or <c>default(T)</c> if the metadata dictionary is <c>null</c> or contains no entries of the requested type.
     /// </returns>
     public T? GetMetadata<T>()
@@ -91,5 +91,61 @@ public readonly partial record struct Error
         }
 
         return default;
+    }
+
+    /// <summary>
+    /// Determines whether this <see cref="Error"/> is structurally equal to another, including key/value-level
+    /// comparison of <see cref="Metadata"/>. Two errors with separately-allocated metadata dictionaries that
+    /// hold the same entries compare equal.
+    /// </summary>
+    public bool Equals(Error other)
+    {
+        if (Type != other.Type) return false;
+        if (!string.Equals(Code, other.Code, StringComparison.Ordinal)) return false;
+        if (!string.Equals(Message, other.Message, StringComparison.Ordinal)) return false;
+        return MetadataEquals(Metadata, other.Metadata);
+    }
+
+    /// <summary>
+    /// Returns a hash code consistent with <see cref="Equals(Error)"/>. Order of metadata entries does not affect the result.
+    /// </summary>
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = (hash * 31) + (int)Type;
+            hash = (hash * 31) + (Code is null ? 0 : Code.GetHashCode());
+            hash = (hash * 31) + (Message is null ? 0 : Message.GetHashCode());
+
+            if (Metadata is not null)
+            {
+                int metaHash = 0;
+                foreach (var kvp in Metadata)
+                {
+                    int keyHash = kvp.Key.GetHashCode();
+                    int valueHash = kvp.Value?.GetHashCode() ?? 0;
+                    metaHash ^= (keyHash * 397) ^ valueHash;
+                }
+                hash = (hash * 31) + metaHash;
+            }
+
+            return hash;
+        }
+    }
+
+    private static bool MetadataEquals(IReadOnlyDictionary<string, object>? a, IReadOnlyDictionary<string, object>? b)
+    {
+        if (ReferenceEquals(a, b)) return true;
+        if (a is null || b is null) return false;
+        if (a.Count != b.Count) return false;
+
+        foreach (var kvp in a)
+        {
+            if (!b.TryGetValue(kvp.Key, out var bValue)) return false;
+            if (!Equals(kvp.Value, bValue)) return false;
+        }
+
+        return true;
     }
 }
