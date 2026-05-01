@@ -40,7 +40,7 @@ public partial record Result<T>
     /// <param name="onFailureAsync">The asynchronous function to execute if the result is a failure. Receives the error as a parameter.</param>
     /// <returns>A task containing the result of executing the appropriate handler function.</returns>
     public async Task<U> MatchAsync<U>(Func<T, Task<U>> onSuccessAsync, Func<Error, Task<U>> onFailureAsync) =>
-        IsSuccess ? await onSuccessAsync(Value) : await onFailureAsync(Error).ConfigureAwait(false);
+        IsSuccess ? await onSuccessAsync(Value).ConfigureAwait(false) : await onFailureAsync(Error).ConfigureAwait(false);
 }
 
 /// <summary>
