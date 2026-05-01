@@ -26,7 +26,7 @@ public static class ErrorExtensions
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata(this Error error, Dictionary<string, object>? metadata)
     {
-        var mergedMetadata = error.Metadata ?? [];
+        var mergedMetadata = error.Metadata is null ? [] : new Dictionary<string, object>(error.Metadata);
 
         foreach (var kvp in metadata ?? [])
         {
@@ -46,7 +46,7 @@ public static class ErrorExtensions
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata<T>(this Error error, string key, T? metadata)
     {
-        var mergedMetadata = error.Metadata ?? [];
+        var mergedMetadata = error.Metadata is null ? [] : new Dictionary<string, object>(error.Metadata);
 
         if (metadata is not null)
             mergedMetadata[key] = metadata; // Override existing keys
