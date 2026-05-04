@@ -149,4 +149,82 @@ public class ErrorTests
         referenceType.Should().BeNull();
         valueType.Should().Be(0);
     }
+
+    [Fact]
+    public void Metadata_Should_NotBeMutable_ViaDowncast()
+    {
+        // Regression: an immutable record struct must not let callers mutate the metadata
+        // by downcasting the IReadOnlyDictionary back to Dictionary.
+        var error = Error.Failure("E001", "Some error", new Dictionary<string, object> { ["k"] = 1 });
+
+        // The metadata is exposed as IReadOnlyDictionary; the underlying type must not be
+        // a mutable Dictionary that the caller can downcast to.
+        (error.Metadata is Dictionary<string, object>).Should().BeFalse();
+
+        Action mutate = () =>
+        {
+            if (error.Metadata is IDictionary<string, object> mutable)
+                mutable["evil"] = "x";
+        };
+
+        mutate.Should().Throw<NotSupportedException>();
+        error.Metadata.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void EmptyMetadataDictionary_Should_BeStoredAsNull()
+    {
+        // Regression: an empty input dictionary should not produce a non-null empty Metadata.
+        var error = Error.Failure("E001", "Some error", new Dictionary<string, object>());
+
+        error.Metadata.Should().BeNull();
+    }
+
+    [Fact]
+    public void WithMetadata_Should_BeNoOp_When_NoMetadataIsAdded()
+    {
+        // Regression: WithMetadata(null) on an error with no metadata used to flip Metadata
+        // from null to an empty Dictionary, breaking value-equality and immutability expectations.
+        var original = Error.Failure("E001", "Some error");
+
+        var afterDict = original.WithMetadata((Dictionary<string, object>?)null);
+        afterDict.Metadata.Should().BeNull();
+        afterDict.Should().Be(original);
+
+        var afterTyped = original.WithMetadata<string>(null);
+        afterTyped.Metadata.Should().BeNull();
+        afterTyped.Should().Be(original);
+    }
+
+    [Fact]
+    public void Constructor_Should_RejectNullCodeOrMessage()
+    {
+        Action nullCode = () => Error.Failure(null!, "msg");
+        Action nullMessage = () => Error.Failure("CODE", null!);
+
+        nullCode.Should().Throw<ArgumentNullException>();
+        nullMessage.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Equals_Should_DistinguishOnTypeCodeMessage()
+    {
+        var baseline = Error.Failure("E001", "msg");
+
+        baseline.Should().NotBe(Error.Validation("E001", "msg"));
+        baseline.Should().NotBe(Error.Failure("E002", "msg"));
+        baseline.Should().NotBe(Error.Failure("E001", "different message"));
+    }
+
+    [Fact]
+    public void Equals_Should_TreatNoMetadataErrorsAsEqual()
+    {
+        // Two independently-built errors with no metadata are equal under default record-struct
+        // equality (Metadata is null on both → reference-equal).
+        var a = Error.Failure("E001", "msg");
+        var b = Error.Failure("E001", "msg");
+
+        a.Should().Be(b);
+        a.GetHashCode().Should().Be(b.GetHashCode());
+    }
 }

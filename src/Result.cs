@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace BetterResult;
 
 /// <summary>
@@ -77,4 +79,18 @@ public partial record Result<T>
     /// <param name="error">The <see cref="Error"/> associated with the failure.</param>
     /// <returns>A failed <see cref="Result{T}"/> instance containing the provided error.</returns>
     public static Result<T> Failure(Error error) => new(error);
+
+    /// <summary>
+    /// Renders only the side that is actually populated. The default record-synthesized
+    /// implementation accesses every property, but <see cref="Value"/> throws on failure
+    /// and <see cref="Error"/> throws on success, so the synthesized version always throws.
+    /// </summary>
+    protected virtual bool PrintMembers(StringBuilder builder)
+    {
+        if (IsFailure)
+            builder.Append("IsFailure = True, Error = ").Append(_error);
+        else
+            builder.Append("IsSuccess = True, Value = ").Append(_value);
+        return true;
+    }
 }

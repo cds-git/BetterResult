@@ -72,7 +72,7 @@ public static class MatchExtensions
     /// <returns>A task containing the result of executing the appropriate handler function.</returns>
     public static async Task<U> MatchAsync<T, U>(
        this Task<Result<T>> result, Func<T, Task<U>> onSuccessAsync, Func<Error, U> onFailure) =>
-           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailure);
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailure).ConfigureAwait(false);
 
     /// <summary>
     /// Asynchronously matches on a Task containing a Result with a synchronous success handler and asynchronous failure handler.
@@ -85,7 +85,7 @@ public static class MatchExtensions
     /// <returns>A task containing the result of executing the appropriate handler function.</returns>
     public static async Task<U> MatchAsync<T, U>(
        this Task<Result<T>> result, Func<T, U> onSuccess, Func<Error, Task<U>> onFailureAsync) =>
-           await (await result.ConfigureAwait(false)).MatchAsync(onSuccess, onFailureAsync);
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccess, onFailureAsync).ConfigureAwait(false);
 
     /// <summary>
     /// Asynchronously matches on a Task containing a Result with asynchronous handlers for both success and failure cases.
@@ -98,5 +98,5 @@ public static class MatchExtensions
     /// <returns>A task containing the result of executing the appropriate handler function.</returns>
     public static async Task<U> MatchAsync<T, U>(
        this Task<Result<T>> result, Func<T, Task<U>> onSuccessAsync, Func<Error, Task<U>> onFailureAsync) =>
-           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailureAsync);
+           await (await result.ConfigureAwait(false)).MatchAsync(onSuccessAsync, onFailureAsync).ConfigureAwait(false);
 }

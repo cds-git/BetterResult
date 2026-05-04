@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace BetterResult;
 
 /// <summary>
@@ -7,11 +9,14 @@ public readonly partial record struct Error
 {
     private Error(ErrorType type, string code, string message, IReadOnlyDictionary<string, object>? metadata)
     {
+        if (code is null) throw new ArgumentNullException(nameof(code));
+        if (message is null) throw new ArgumentNullException(nameof(message));
+
         Type = type;
         Code = code;
         Message = message;
 
-        if (metadata is null)
+        if (metadata is null || metadata.Count == 0)
         {
             Metadata = null;
         }
@@ -20,7 +25,7 @@ public readonly partial record struct Error
             var copy = new Dictionary<string, object>(metadata.Count);
             foreach (var kvp in metadata)
                 copy[kvp.Key] = kvp.Value;
-            Metadata = copy;
+            Metadata = new ReadOnlyDictionary<string, object>(copy);
         }
     }
 
@@ -42,6 +47,12 @@ public readonly partial record struct Error
     /// <summary>
     /// Gets the metadata.
     /// </summary>
+    /// <remarks>
+    /// Metadata participates in <see cref="Equals(Error)"/>/<see cref="GetHashCode"/> by reference,
+    /// not by content. Identity-style comparisons should rely on <see cref="Type"/>, <see cref="Code"/>,
+    /// and <see cref="Message"/> rather than expecting two independently-constructed errors with
+    /// equivalent metadata to compare equal.
+    /// </remarks>
     public IReadOnlyDictionary<string, object>? Metadata { get; }
 
     /// <summary>
@@ -93,59 +104,4 @@ public readonly partial record struct Error
         return default;
     }
 
-    /// <summary>
-    /// Determines whether this <see cref="Error"/> is structurally equal to another, including key/value-level
-    /// comparison of <see cref="Metadata"/>. Two errors with separately-allocated metadata dictionaries that
-    /// hold the same entries compare equal.
-    /// </summary>
-    public bool Equals(Error other)
-    {
-        if (Type != other.Type) return false;
-        if (!string.Equals(Code, other.Code, StringComparison.Ordinal)) return false;
-        if (!string.Equals(Message, other.Message, StringComparison.Ordinal)) return false;
-        return MetadataEquals(Metadata, other.Metadata);
-    }
-
-    /// <summary>
-    /// Returns a hash code consistent with <see cref="Equals(Error)"/>. Order of metadata entries does not affect the result.
-    /// </summary>
-    public override int GetHashCode()
-    {
-        unchecked
-        {
-            int hash = 17;
-            hash = (hash * 31) + (int)Type;
-            hash = (hash * 31) + (Code is null ? 0 : Code.GetHashCode());
-            hash = (hash * 31) + (Message is null ? 0 : Message.GetHashCode());
-
-            if (Metadata is not null)
-            {
-                int metaHash = 0;
-                foreach (var kvp in Metadata)
-                {
-                    int keyHash = kvp.Key.GetHashCode();
-                    int valueHash = kvp.Value?.GetHashCode() ?? 0;
-                    metaHash ^= (keyHash * 397) ^ valueHash;
-                }
-                hash = (hash * 31) + metaHash;
-            }
-
-            return hash;
-        }
-    }
-
-    private static bool MetadataEquals(IReadOnlyDictionary<string, object>? a, IReadOnlyDictionary<string, object>? b)
-    {
-        if (ReferenceEquals(a, b)) return true;
-        if (a is null || b is null) return false;
-        if (a.Count != b.Count) return false;
-
-        foreach (var kvp in a)
-        {
-            if (!b.TryGetValue(kvp.Key, out var bValue)) return false;
-            if (!Equals(kvp.Value, bValue)) return false;
-        }
-
-        return true;
-    }
 }

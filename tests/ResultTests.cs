@@ -162,4 +162,42 @@ public class ResultTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("NOT_FOUND");
     }
+
+    [Fact]
+    public void ToString_Should_NotThrow_When_ResultIsSuccess()
+    {
+        // Regression: the auto-synthesized record ToString accesses every property,
+        // which would call Error and throw on a successful result.
+        Result<int> result = 42;
+
+        Action act = () => result.ToString();
+
+        act.Should().NotThrow();
+        result.ToString().Should().Contain("Value").And.Contain("42");
+    }
+
+    [Fact]
+    public void ToString_Should_NotThrow_When_ResultIsFailure()
+    {
+        // Regression: the auto-synthesized record ToString accesses Value and would throw on a failed result.
+        Result<int> result = Error.Failure("E001", "Some failure");
+
+        Action act = () => result.ToString();
+
+        act.Should().NotThrow();
+        result.ToString().Should().Contain("Error").And.Contain("E001");
+    }
+
+    [Fact]
+    public void StringInterpolation_Should_NotThrow_For_BothStates()
+    {
+        Result<int> success = 42;
+        Result<int> failure = Error.Failure("E001", "Some failure");
+
+        Action successAct = () => _ = $"{success}";
+        Action failureAct = () => _ = $"{failure}";
+
+        successAct.Should().NotThrow();
+        failureAct.Should().NotThrow();
+    }
 }

@@ -147,6 +147,8 @@ Result<User> GetUser(int id) =>
         : Result.Failure<User>(Error.Validation("INVALID_ID", "User ID must be positive"));
 ```
 
+> **Note:** `Result<Error>` (where the success type *is* `Error`) is not supported via implicit conversion — the two implicit operators collapse to the same conversion signature and the compiler reports `CS0457`. Use `Result<Error>.Success(...)` / `Result<Error>.Failure(...)` explicitly if you need this combination.
+
 **Working with Results:**
 ```csharp
 Result<int> CalculateAge(DateTime birthDate)
@@ -1152,6 +1154,10 @@ The `Error` struct encapsulates failure information with rich metadata and a var
 - `string Code` – Error code that can be used to decipher it (e.g. HTTP status codes or localization key).
 - `string Message` – Error description.
 - `IReadOnlyDictionary<string, object>? Metadata` – Optional contextual data. Read-only by design; use `WithMetadata(...)` to produce a new error with added/updated entries rather than mutating in place.
+
+### Equality
+
+`Error` uses the default record-struct equality. `Type`, `Code`, and `Message` are compared by value; `Metadata` is compared by reference (the underlying dictionary type does not provide structural equality). Two errors built independently with no metadata are equal; two errors that both carry metadata will only be equal if they share the same underlying `Metadata` reference. For identity-style comparisons, prefer `Type`, `Code`, and `Message` directly.
 
 ### Metadata Accessors
 
