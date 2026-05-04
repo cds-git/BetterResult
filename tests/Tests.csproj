@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CsCheck" Version="4.6.2" />
     <PackageReference Include="FluentAssertions" Version="7.2.1" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
   </ItemGroup>
