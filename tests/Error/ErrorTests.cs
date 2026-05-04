@@ -227,4 +227,56 @@ public class ErrorTests
         a.Should().Be(b);
         a.GetHashCode().Should().Be(b.GetHashCode());
     }
+
+    [Fact]
+    public void WithMetadata_Should_AcceptIReadOnlyDictionary()
+    {
+        // Regression: an IReadOnlyDictionary (e.g. read off another error's Metadata)
+        // should be accepted directly without requiring the caller to materialize a Dictionary.
+        var source = Error.Failure("E", "M", new Dictionary<string, object> { ["k"] = 1, ["other"] = "x" });
+        IReadOnlyDictionary<string, object> ro = source.Metadata!;
+
+        var target = Error.Failure("E2", "M2").WithMetadata(ro);
+
+        target.Metadata.Should().ContainKey("k").WhoseValue.Should().Be(1);
+        target.Metadata.Should().ContainKey("other").WhoseValue.Should().Be("x");
+    }
+
+    [Fact]
+    public void WithCode_Should_ReplaceCode_AndPreserveEverythingElse()
+    {
+        var meta = new Dictionary<string, object> { ["k"] = 1 };
+        var original = Error.Validation("V001", "msg", meta);
+
+        var modified = original.WithCode("V002");
+
+        modified.Code.Should().Be("V002");
+        modified.Type.Should().Be(ErrorType.Validation);
+        modified.Message.Should().Be("msg");
+        modified.Metadata.Should().ContainKey("k").WhoseValue.Should().Be(1);
+    }
+
+    [Fact]
+    public void WithType_Should_ReplaceType_AndPreserveEverythingElse()
+    {
+        var meta = new Dictionary<string, object> { ["k"] = 1 };
+        var original = Error.Failure("E001", "msg", meta);
+
+        var modified = original.WithType(ErrorType.Validation);
+
+        modified.Type.Should().Be(ErrorType.Validation);
+        modified.Code.Should().Be("E001");
+        modified.Message.Should().Be("msg");
+        modified.Metadata.Should().ContainKey("k").WhoseValue.Should().Be(1);
+    }
+
+    [Fact]
+    public void WithCode_Should_RejectNull()
+    {
+        var original = Error.Failure("E", "msg");
+
+        Action act = () => original.WithCode(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
 }

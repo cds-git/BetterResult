@@ -12,6 +12,15 @@ public partial record Result<T>
         IsSuccess ? Value : map(Error);
 
     /// <summary>
+    /// Transforms a failure result by mapping its <see cref="Error"/> to a new <see cref="Error"/>.
+    /// If the current result is successful, the value is preserved unchanged.
+    /// </summary>
+    /// <param name="map">The function to apply to the error if the result is a failure.</param>
+    /// <returns>A failure result with the mapped error, or the current successful result unchanged.</returns>
+    public Result<T> MapError(Func<Error, Error> map) =>
+        IsSuccess ? this : map(Error);
+
+    /// <summary>
     /// Asynchronously transforms a failure result by applying the map function to the error.
     /// If the current result is successful, the value is preserved unchanged.
     /// </summary>
@@ -19,6 +28,15 @@ public partial record Result<T>
     /// <returns>A task containing the result of the map function if failed, or the current successful result unchanged.</returns>
     public async Task<Result<T>> MapErrorAsync(Func<Error, Task<Result<T>>> mapAsync) =>
         IsSuccess ? Value : await mapAsync(Error).ConfigureAwait(false);
+
+    /// <summary>
+    /// Asynchronously transforms a failure result by mapping its <see cref="Error"/> to a new <see cref="Error"/>.
+    /// If the current result is successful, the value is preserved unchanged.
+    /// </summary>
+    /// <param name="mapAsync">The asynchronous function to apply to the error if the result is a failure.</param>
+    /// <returns>A task containing a failure result with the mapped error, or the current successful result unchanged.</returns>
+    public async Task<Result<T>> MapErrorAsync(Func<Error, Task<Error>> mapAsync) =>
+        IsSuccess ? this : await mapAsync(Error).ConfigureAwait(false);
 }
 
 /// <summary>
@@ -38,6 +56,17 @@ public static class MapErrorExtensions
             (await result.ConfigureAwait(false)).MapError(map);
 
     /// <summary>
+    /// Asynchronously maps a Task-wrapped Result's error to a new <see cref="Error"/> with value preservation.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="result">The task containing the result to map errors on.</param>
+    /// <param name="map">The function to apply to the error if the result is a failure.</param>
+    /// <returns>A task containing a failure result with the mapped error, or the original successful result unchanged.</returns>
+    public static async Task<Result<T>> MapErrorAsync<T>(
+        this Task<Result<T>> result, Func<Error, Error> map) =>
+            (await result.ConfigureAwait(false)).MapError(map);
+
+    /// <summary>
     /// Asynchronously maps an asynchronous error transformation function on a Task-wrapped Result with value preservation.
     /// </summary>
     /// <typeparam name="T">The type of the value in the result.</typeparam>
@@ -46,5 +75,16 @@ public static class MapErrorExtensions
     /// <returns>A task containing the result of the error map function if failed, or the original successful result unchanged.</returns>
     public static async Task<Result<T>> MapErrorAsync<T>(
         this Task<Result<T>> result, Func<Error, Task<Result<T>>> mapAsync) =>
+            await (await result.ConfigureAwait(false)).MapErrorAsync(mapAsync).ConfigureAwait(false);
+
+    /// <summary>
+    /// Asynchronously maps a Task-wrapped Result's error to a new <see cref="Error"/> via an async function, with value preservation.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="result">The task containing the result to map errors on.</param>
+    /// <param name="mapAsync">The asynchronous function to apply to the error if the result is a failure.</param>
+    /// <returns>A task containing a failure result with the mapped error, or the original successful result unchanged.</returns>
+    public static async Task<Result<T>> MapErrorAsync<T>(
+        this Task<Result<T>> result, Func<Error, Task<Error>> mapAsync) =>
             await (await result.ConfigureAwait(false)).MapErrorAsync(mapAsync).ConfigureAwait(false);
 }

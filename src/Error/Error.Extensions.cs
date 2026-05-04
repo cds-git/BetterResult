@@ -18,13 +18,40 @@ public static class ErrorExtensions
     }
 
     /// <summary>
+    /// Creates a new <see cref="Error"/> with the specified <paramref name="code"/>, preserving
+    /// type, message, and metadata. Useful for re-mapping an external error to your own code space.
+    /// </summary>
+    public static Error WithCode(this Error error, string code) =>
+        Error.Create(error.Type, code, error.Message, error.Metadata);
+
+    /// <summary>
+    /// Creates a new <see cref="Error"/> with the specified <paramref name="type"/>, preserving
+    /// code, message, and metadata. Useful for re-categorising an error during translation.
+    /// </summary>
+    public static Error WithType(this Error error, ErrorType type) =>
+        Error.Create(type, error.Code, error.Message, error.Metadata);
+
+    /// <summary>
     /// Creates a new <see cref="Error"/> by merging the provided metadata dictionary with the current error's metadata.
     /// Existing keys in the current metadata will be overridden by the new values.
     /// </summary>
     /// <param name="error">The current error.</param>
     /// <param name="metadata">The new metadata to merge with the existing metadata.</param>
     /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
-    public static Error WithMetadata(this Error error, Dictionary<string, object>? metadata)
+    public static Error WithMetadata(this Error error, Dictionary<string, object>? metadata) =>
+        MergeMetadata(error, metadata);
+
+    /// <summary>
+    /// Creates a new <see cref="Error"/> by merging the provided metadata with the current error's metadata.
+    /// Existing keys in the current metadata will be overridden by the new values.
+    /// </summary>
+    /// <param name="error">The current error.</param>
+    /// <param name="metadata">The new metadata to merge with the existing metadata.</param>
+    /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
+    public static Error WithMetadata(this Error error, IReadOnlyDictionary<string, object>? metadata) =>
+        MergeMetadata(error, metadata);
+
+    private static Error MergeMetadata(Error error, IReadOnlyDictionary<string, object>? metadata)
     {
         var mergedMetadata = CopyOrEmpty(error.Metadata);
 
@@ -57,9 +84,7 @@ public static class ErrorExtensions
 
     private static Dictionary<string, object> CopyOrEmpty(IReadOnlyDictionary<string, object>? source)
     {
-        if (source is null)
-            return [];
-
+        if (source is null) return [];
         var copy = new Dictionary<string, object>(source.Count);
         foreach (var kvp in source)
             copy[kvp.Key] = kvp.Value;

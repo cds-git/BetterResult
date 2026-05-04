@@ -2,6 +2,19 @@ namespace BetterResult;
 
 public partial record Result<T>
 {
+    private static Error CreateExceptionError(Exception ex) =>
+        Error.Unexpected("EXCEPTION", ex.Message)
+            .WithMetadata("ExceptionType", ex.GetType().Name);
+
+    private static Error InvokeErrorMapper(Func<Exception, Error> errorMapper, Exception ex)
+    {
+        var mapped = errorMapper(ex);
+        // Guard: a buggy mapper that returns default(Error) would otherwise throw
+        // ArgumentException out of the catch via the implicit Error->Result conversion,
+        // breaking Try's "doesn't throw on user code" contract.
+        return mapped.Code is null ? CreateExceptionError(ex) : mapped;
+    }
+
     /// <summary>
     /// Transforms the value in a successful result by applying an operation that may throw an exception.
     /// If the current result is a failure, the error is propagated without executing the operation.
@@ -20,8 +33,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Error.Unexpected("EXCEPTION", ex.Message)
-                .WithMetadata("ExceptionType", ex.GetType().Name);
+            return CreateExceptionError(ex);
         }
     }
 
@@ -29,6 +41,8 @@ public partial record Result<T>
     /// Transforms the value in a successful result by applying an operation that may throw an exception, using a custom error mapper.
     /// If the current result is a failure, the error is propagated without executing the operation.
     /// If an exception is thrown during the operation, the error mapper is called to create the error.
+    /// If the mapper returns <c>default(Error)</c>, a synthesized Unexpected error is used instead so that
+    /// <c>Try</c> never throws.
     /// </summary>
     /// <typeparam name="U">The type of the value in the returned result.</typeparam>
     /// <param name="operation">The operation to apply to the current value if the result is successful.</param>
@@ -44,7 +58,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return errorMapper(ex);
+            return InvokeErrorMapper(errorMapper, ex);
         }
     }
 
@@ -66,8 +80,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Error.Unexpected("EXCEPTION", ex.Message)
-                .WithMetadata("ExceptionType", ex.GetType().Name);
+            return CreateExceptionError(ex);
         }
     }
 
@@ -75,6 +88,8 @@ public partial record Result<T>
     /// Asynchronously transforms the value in a successful result by applying an operation that may throw an exception, using a custom error mapper.
     /// If the current result is a failure, the error is propagated without executing the operation.
     /// If an exception is thrown during the operation, the error mapper is called to create the error.
+    /// If the mapper returns <c>default(Error)</c>, a synthesized Unexpected error is used instead so that
+    /// <c>TryAsync</c> never throws.
     /// </summary>
     /// <typeparam name="U">The type of the value in the returned result.</typeparam>
     /// <param name="operation">The asynchronous operation to apply to the current value if the result is successful.</param>
@@ -90,7 +105,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return errorMapper(ex);
+            return InvokeErrorMapper(errorMapper, ex);
         }
     }
 }

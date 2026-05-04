@@ -311,4 +311,32 @@ public class TryTests
         // Assert
         final.Should().Be("Success: 42");
     }
+
+    [Fact]
+    public void Try_Should_NotThrow_When_ErrorMapperReturnsDefaultError()
+    {
+        // Regression: a buggy errorMapper that returns default(Error) used to leak
+        // ArgumentException out of Try (the implicit Error->Result conversion would throw).
+        var result = Result<string>.Success("not a number");
+
+        Action act = () => result.Try(x => int.Parse(x), _ => default(Error));
+        act.Should().NotThrow();
+
+        var transformed = result.Try(x => int.Parse(x), _ => default(Error));
+        transformed.IsFailure.Should().BeTrue();
+        transformed.Error.Code.Should().Be("EXCEPTION");
+    }
+
+    [Fact]
+    public async Task TryAsync_Should_NotThrow_When_ErrorMapperReturnsDefaultError()
+    {
+        var result = Result<string>.Success("not a number");
+
+        var transformed = await result.TryAsync<int>(
+            async x => { await Task.Yield(); return int.Parse(x); },
+            _ => default(Error));
+
+        transformed.IsFailure.Should().BeTrue();
+        transformed.Error.Code.Should().Be("EXCEPTION");
+    }
 }
