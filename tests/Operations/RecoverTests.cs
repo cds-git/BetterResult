@@ -3,6 +3,93 @@ namespace BetterResult.Tests;
 public class RecoverTests
 {
     [Fact]
+    public void Recover_Unconditional_Should_PreserveSuccess_When_ResultIsSuccess()
+    {
+        // Arrange
+        var result = Result<int>.Success(42);
+        var called = false;
+
+        // Act
+        var recovered = result.Recover(err => { called = true; return Result<int>.Success(99); });
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(42);
+        called.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Recover_Unconditional_Should_Recover_OnAnyFailure()
+    {
+        // Arrange
+        var result = Result<int>.Failure(Error.Validation("V", "invalid"));
+
+        // Act
+        var recovered = result.Recover(err => Result<int>.Success(99));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public void Recover_Unconditional_Should_ReturnRecoveryError_When_RecoveryItselfFails()
+    {
+        // Arrange
+        var recoveryError = Error.Unavailable("UNAVAILABLE", "Service unavailable");
+        var result = Result<int>.Failure(Error.NotFound("NOT_FOUND", "missing"));
+
+        // Act
+        var recovered = result.Recover(err => Result<int>.Failure(recoveryError));
+
+        // Assert
+        recovered.IsFailure.Should().BeTrue();
+        recovered.Error.Should().Be(recoveryError);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_Unconditional_Should_Recover_OnAnyFailure()
+    {
+        // Arrange
+        var result = Result<int>.Failure(Error.Timeout("T", "timed out"));
+
+        // Act
+        var recovered = await result.RecoverAsync(err => Task.FromResult(Result<int>.Success(99)));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_TaskResult_Unconditional_SyncRecovery_Should_Recover()
+    {
+        // Arrange
+        var resultTask = Task.FromResult(Result<int>.Failure(Error.Conflict("C", "conflict")));
+
+        // Act
+        var recovered = await resultTask.RecoverAsync(err => Result<int>.Success(99));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_TaskResult_Unconditional_AsyncRecovery_Should_Recover()
+    {
+        // Arrange
+        var resultTask = Task.FromResult(Result<int>.Failure(Error.Conflict("C", "conflict")));
+
+        // Act
+        var recovered = await resultTask.RecoverAsync(err => Task.FromResult(Result<int>.Success(99)));
+
+        // Assert
+        recovered.IsSuccess.Should().BeTrue();
+        recovered.Value.Should().Be(99);
+    }
+
+    [Fact]
     public void Recover_WithErrorType_Should_PreserveSuccess_When_ResultIsSuccess()
     {
         // Arrange

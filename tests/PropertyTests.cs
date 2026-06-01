@@ -204,7 +204,6 @@ public class PropertyTests
         {
             var r = Result<int>.Success(i);
             r.MapError(err => err.WithMessage("ctx")).Should().Be(r);
-            r.MapError(err => Result<int>.Failure(err.WithMessage("ctx"))).Should().Be(r);
         });
     }
 

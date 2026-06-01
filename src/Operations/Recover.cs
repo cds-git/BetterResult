@@ -3,6 +3,23 @@ namespace BetterResult;
 public partial record Result<T>
 {
     /// <summary>
+    /// Attempts to recover from any failure by applying a recovery function.
+    /// If the current result is successful, the result passes through unchanged.
+    /// </summary>
+    /// <remarks>
+    /// This is the unconditional form of recovery. The recovery function may itself return a failure
+    /// (useful for "try a fallback that might also fail" patterns). To recover only from specific
+    /// errors, use the <see cref="ErrorType"/>, error-type set, or predicate overloads.
+    /// </remarks>
+    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
+    /// <returns>The recovery result if the current result is a failure, or the original successful result unchanged.</returns>
+    public Result<T> Recover(Func<Error, Result<T>> recovery)
+    {
+        if (IsSuccess) return this;
+        return recovery(Error);
+    }
+
+    /// <summary>
     /// Attempts to recover from a failure by applying a recovery function if the error matches the specified type.
     /// If the current result is successful or the error type doesn't match, the result passes through unchanged.
     /// </summary>
@@ -73,6 +90,18 @@ public partial record Result<T>
     }
 
     /// <summary>
+    /// Asynchronously attempts to recover from any failure by applying a recovery function.
+    /// If the current result is successful, the result passes through unchanged.
+    /// </summary>
+    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
+    /// <returns>A task containing the recovery result if the current result is a failure, or the original successful result unchanged.</returns>
+    public async Task<Result<T>> RecoverAsync(Func<Error, Task<Result<T>>> recoveryAsync)
+    {
+        if (IsSuccess) return this;
+        return await recoveryAsync(Error).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Asynchronously attempts to recover from a failure by applying a recovery function if the error matches the specified type.
     /// If the current result is successful or the error type doesn't match, the result passes through unchanged.
     /// </summary>
@@ -120,6 +149,36 @@ public partial record Result<T>
 /// </summary>
 public static class RecoverExtensions
 {
+    /// <summary>
+    /// Asynchronously recovers from any failure by applying a recovery function.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="resultTask">The task containing the result to recover from.</param>
+    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
+    /// <returns>A task containing the recovery result if the current result is a failure, or the original successful result unchanged.</returns>
+    public static async Task<Result<T>> RecoverAsync<T>(
+        this Task<Result<T>> resultTask,
+        Func<Error, Result<T>> recovery)
+    {
+        var result = await resultTask.ConfigureAwait(false);
+        return result.Recover(recovery);
+    }
+
+    /// <summary>
+    /// Asynchronously recovers from any failure by applying an asynchronous recovery function.
+    /// </summary>
+    /// <typeparam name="T">The type of the value in the result.</typeparam>
+    /// <param name="resultTask">The task containing the result to recover from.</param>
+    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
+    /// <returns>A task containing the recovery result if the current result is a failure, or the original successful result unchanged.</returns>
+    public static async Task<Result<T>> RecoverAsync<T>(
+        this Task<Result<T>> resultTask,
+        Func<Error, Task<Result<T>>> recoveryAsync)
+    {
+        var result = await resultTask.ConfigureAwait(false);
+        return await result.RecoverAsync(recoveryAsync).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Asynchronously recovers from a failure by applying a recovery function if the error matches the specified type.
     /// </summary>

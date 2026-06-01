@@ -16,7 +16,7 @@ it forces developers to acknowledge and manage errors at every step, resulting i
 - [Operations](#operations)
   - [Bind - Monadic Chaining](#bind---monadic-chaining)
   - [Map - Value Transformation](#map---value-transformation)
-  - [MapError - Error Recovery](#maperror---error-recovery)
+  - [MapError - Error Translation](#maperror---error-translation)
   - [Tap - Side Effects on Success](#tap---side-effects-on-success)
   - [TapError - Side Effects on Failure](#taperror---side-effects-on-failure)
   - [Match - Result Folding](#match---result-folding)
@@ -339,39 +339,27 @@ Result<string> message = workResult.Map(_ => "Work completed successfully");
 **Key point**: Map operations receive unwrapped values and return plain values (not Results). 
 Errors automatically propagate without executing the map operation.
 
-### MapError - Error Recovery
+### MapError - Error Translation
 
-**Purpose**: Transforms or recovers from failures by examining the error and potentially converting it to a success.
+**Purpose**: Transforms (relabels) the error of a failed result. The result stays a failure — `MapError` is for error *translation*, not recovery.
 
-**When to use**: When you want to provide fallback values, retry logic, or transform one error type into another.
+**When to use**: When you want to map one error into another — re-coding an external error into your own code space, adding context, or re-categorising the `ErrorType`. To turn a failure back into a success, use [`Recover`](#recover---error-recovery) instead.
 
 ```csharp
-// Provide fallback values
-Result<User> user = GetUser(userId)
-    .MapError(error => error.Code == "NOT_FOUND" 
-        ? Result.Success(User.Guest)     // Convert to success
-        : error);                        // Keep original error
-
 // Error transformation
 Result<Data> data = LoadData()
     .MapError(error => Error.Validation("LOAD_001", $"Failed to load: {error.Message}"));
 
-// Retry logic
-Result<string> content = DownloadContent()
-    .MapError(async error => 
-    {
-        if (error.Code == "TIMEOUT" && retryCount < 3)
-            return await RetryDownload();
-        return error;
-    });
+// Add context while preserving code/type/metadata
+Result<Order> order = PlaceOrder(request)
+    .MapError(error => error.WithMessage("Checkout failed"));
 
-// Graceful degradation
-Result<WeatherData> weather = GetWeatherFromApi()
-    .MapError(error => GetCachedWeather())     // Fallback to cache
-    .MapError(error => GetDefaultWeather());   // Ultimate fallback
+// Async translation (e.g. enrich from another service)
+Result<string> content = await DownloadContent()
+    .MapErrorAsync(async error => await ClassifyAsync(error));
 ```
 
-**Key point**: MapError only executes on failures and can convert them back to successes. Successful results pass through unchanged.
+**Key point**: `MapError` only executes on failures and always stays a failure (`Error → Error`). Successful results pass through unchanged. It cannot convert a failure into a success — that's [`Recover`](#recover---error-recovery)'s job.
 
 ### Tap - Side Effects on Success
 
@@ -436,8 +424,8 @@ await UploadFileAsync(file)
 // Debugging and development
 var pipeline = LoadData()
     .TapError(error => Console.WriteLine($"Step 1 failed: {error}"))
-    .MapError(error => RetryLogic(error))
-    .TapError(error => Console.WriteLine($"Retry also failed: {error}"));
+    .MapError(error => error.WithMessage("LoadData step"))
+    .TapError(error => Console.WriteLine($"After relabel: {error}"));
 ```
 
 **Key point**: TapError actions receive the error but don't modify the result. Failed results remain failed, successful results are untouched.
@@ -531,9 +519,9 @@ async Task<IActionResult> UpdateUserProfileAsync(int userId, UpdateProfileReques
 // Error handling with fallbacks
 Result<Configuration> config = LoadPrimaryConfig()
     .TapError(error => logger.LogWarning($"Primary config failed: {error.Message}"))
-    .MapError(error => LoadBackupConfig())
+    .Recover(_ => LoadBackupConfig())
     .TapError(error => logger.LogWarning($"Backup config failed: {error.Message}"))
-    .MapError(error => LoadDefaultConfig())
+    .Recover(_ => LoadDefaultConfig())
     .TapError(error => logger.LogError($"All config sources failed: {error.Message}"));
 ```
 
@@ -652,6 +640,10 @@ Result<Transaction> transaction = CreateTransaction(data)
 **When to use**: When you want to handle specific error types with fallback values or recovery logic, retry failed operations, or provide default values for expected failures.
 
 ```csharp
+// Unconditional recovery — handle any failure
+Result<Config> config = LoadConfig()
+    .Recover(error => LoadDefaultConfig());  // any error → fall back
+
 // Basic recovery with fallback value
 Result<User> user = GetUser(userId)
     .Recover(ErrorType.NotFound, User.Guest);  // Use guest user if not found
@@ -724,11 +716,11 @@ Result<ImageData> image = LoadHighResImage(imageId)
     .Recover(ErrorType.NotFound, ImageData.Placeholder);
 ```
 
-**Key point**: Recover only executes when the result is a failure AND the condition matches. Success results pass through unchanged. The condition can be a single `ErrorType`, a set of `ErrorType`s (`IEnumerable<ErrorType>`), or a custom `Func<Error, bool>` predicate. The recovery itself can either return a successful value or another `Result<T>` (which may itself be a failure — useful for "try fallback, but it might also fail" patterns).
+**Key point**: Recover only executes when the result is a failure (and, for the conditional overloads, when the condition matches). Success results pass through unchanged. The condition can be omitted (recover from *any* failure), a single `ErrorType`, a set of `ErrorType`s (`IEnumerable<ErrorType>`), or a custom `Func<Error, bool>` predicate. The recovery itself can either return a successful value or another `Result<T>` (which may itself be a failure — useful for "try fallback, but it might also fail" patterns).
 
 **Recover vs MapError**:
-- **MapError**: Examines *every* error, must return a `Result<T>`. Use when you want to transform/wrap all errors uniformly.
-- **Recover**: Acts only on errors matching a filter (single type, multi-type, or predicate). Use when you want to handle specific error types — same handler can serve several errors via the multi-type overload.
+- **MapError**: error *translation* only (`Error → Error`). The result always stays a failure — use it to re-code, re-categorise, or add context to an error. It cannot turn a failure into a success.
+- **Recover**: failure → maybe-success. Use it to handle failures (unconditionally, or filtered by single type, multi-type, or predicate) and get back to a successful value. To recover while *changing* the value type, transform the success rail first with `Map`/`Bind`, then `Recover`.
 
 ### Sequence - Collection Aggregation
 
