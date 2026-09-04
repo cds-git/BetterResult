@@ -3,11 +3,8 @@ namespace BetterResult;
 public readonly partial record struct Error
 {
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Failure"/> from a code and message.
+    /// An expected failure, such as a broken business rule.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Failure(
        string code = "General.Failure",
        string message = "Failure",
@@ -15,11 +12,8 @@ public readonly partial record struct Error
            new(ErrorType.Failure, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Unexpected"/> from a code and message.
+    /// An unexpected internal error, such as a caught exception.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Unexpected(
         string code = "General.Unexpected",
         string message = "An unexpected error has occurred.",
@@ -27,11 +21,8 @@ public readonly partial record struct Error
             new(ErrorType.Unexpected, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Validation"/> from a code and message.
+    /// One or more inputs failed validation.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Validation(
         string code = "General.Validation",
         string message = "Validation error has occurred.",
@@ -39,11 +30,8 @@ public readonly partial record struct Error
             new(ErrorType.Validation, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.NotFound"/> from a code and message.
+    /// The requested resource does not exist.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error NotFound(
         string code = "General.NotFound",
         string message = "Not Found",
@@ -51,11 +39,8 @@ public readonly partial record struct Error
             new(ErrorType.NotFound, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Conflict"/> from a code and message.
+    /// The operation clashes with the current state of the resource.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Conflict(
         string code = "General.Conflict",
         string message = "Conflict",
@@ -63,13 +48,9 @@ public readonly partial record struct Error
             new(ErrorType.Conflict, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Unauthorized"/> from a code and message.
-    /// Use this when the caller is not authenticated; use <see cref="Forbidden"/> when the caller is
-    /// authenticated but lacks the required permission.
+    /// The caller is not authenticated. Use <see cref="Forbidden"/> when the caller is authenticated
+    /// but lacks permission.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Unauthorized(
         string code = "General.Unauthorized",
         string message = "Unauthorized",
@@ -77,13 +58,9 @@ public readonly partial record struct Error
             new(ErrorType.Unauthorized, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Forbidden"/> from a code and message.
-    /// Use this when the caller is authenticated but lacks the required permission; use
-    /// <see cref="Unauthorized"/> when the caller is not authenticated at all.
+    /// The caller is authenticated but lacks permission. Use <see cref="Unauthorized"/> when the caller
+    /// is not authenticated at all.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Forbidden(
         string code = "General.Forbidden",
         string message = "Forbidden",
@@ -91,11 +68,8 @@ public readonly partial record struct Error
             new(ErrorType.Forbidden, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Unavailable"/> from a code and message.
+    /// A dependency is down. Usually transient.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Unavailable(
         string code = "General.Unavailable",
         string message = "The requested service was unavailable",
@@ -103,11 +77,8 @@ public readonly partial record struct Error
             new(ErrorType.Unavailable, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Timeout"/> from a code and message.
+    /// The operation ran out of time.
     /// </summary>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Timeout(
         string code = "General.Timeout",
         string message = "Timeout",
@@ -115,13 +86,8 @@ public readonly partial record struct Error
             new(ErrorType.Timeout, code, message, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> with the given <paramref name="type"/>,
-    /// <paramref name="code"/>, and <paramref name="message"/>.
+    /// An error with an explicit <see cref="ErrorType"/>, for when none of the named factories fit.
     /// </summary>
-    /// <param name="type"><see cref="ErrorType"/> value which represents the type of error that occurred.</param>
-    /// <param name="code">The unique error code.</param>
-    /// <param name="message">The error description.</param>
-    /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Create(
         ErrorType type,
         string code = "General.Custom",

@@ -1,16 +1,13 @@
 namespace BetterResult;
 
 /// <summary>
-/// Extension methods for <see cref="Error"/>.
+/// Extension methods for <see cref="Error"/>. Each returns a new error; the original is untouched.
 /// </summary>
 public static class ErrorExtensions
 {
     /// <summary>
-    /// Creates a new <see cref="Error"/> with the specified message prepended to the current error's description.
+    /// Prepends <paramref name="message"/> to the existing message, keeping type, code, and metadata.
     /// </summary>
-    /// <param name="error">The current error.</param>
-    /// <param name="message">The message to prepend to the current error's description.</param>
-    /// <returns>A new <see cref="Error"/> with the updated message.</returns>
     public static Error WithMessage(this Error error, string message)
     {
         string newDescription = $"{message}: {error.Message}";
@@ -18,36 +15,28 @@ public static class ErrorExtensions
     }
 
     /// <summary>
-    /// Creates a new <see cref="Error"/> with the specified <paramref name="code"/>, preserving
-    /// type, message, and metadata. Useful for re-mapping an external error to your own code space.
+    /// Replaces the code, keeping type, message, and metadata. Handy for re-mapping an external error
+    /// into your own code space.
     /// </summary>
     public static Error WithCode(this Error error, string code) =>
         Error.Create(error.Type, code, error.Message, error.Metadata);
 
     /// <summary>
-    /// Creates a new <see cref="Error"/> with the specified <paramref name="type"/>, preserving
-    /// code, message, and metadata. Useful for re-categorising an error during translation.
+    /// Replaces the type, keeping code, message, and metadata. Handy for re-categorising an error
+    /// during translation.
     /// </summary>
     public static Error WithType(this Error error, ErrorType type) =>
         Error.Create(type, error.Code, error.Message, error.Metadata);
 
     /// <summary>
-    /// Creates a new <see cref="Error"/> by merging the provided metadata dictionary with the current error's metadata.
-    /// Existing keys in the current metadata will be overridden by the new values.
+    /// Merges <paramref name="metadata"/> into the existing metadata. Duplicate keys are overwritten.
     /// </summary>
-    /// <param name="error">The current error.</param>
-    /// <param name="metadata">The new metadata to merge with the existing metadata.</param>
-    /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata(this Error error, Dictionary<string, object>? metadata) =>
         MergeMetadata(error, metadata);
 
     /// <summary>
-    /// Creates a new <see cref="Error"/> by merging the provided metadata with the current error's metadata.
-    /// Existing keys in the current metadata will be overridden by the new values.
+    /// Merges <paramref name="metadata"/> into the existing metadata. Duplicate keys are overwritten.
     /// </summary>
-    /// <param name="error">The current error.</param>
-    /// <param name="metadata">The new metadata to merge with the existing metadata.</param>
-    /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata(this Error error, IReadOnlyDictionary<string, object>? metadata) =>
         MergeMetadata(error, metadata);
 
@@ -58,26 +47,21 @@ public static class ErrorExtensions
         if (metadata is not null)
         {
             foreach (var kvp in metadata)
-                mergedMetadata[kvp.Key] = kvp.Value;  // Override existing keys
+                mergedMetadata[kvp.Key] = kvp.Value;
         }
 
         return Error.Create(error.Type, error.Code, error.Message, mergedMetadata);
     }
 
     /// <summary>
-    /// Creates a new <see cref="Error"/> by adding or updating a specific metadata key-value pair.
+    /// Adds or overwrites a single metadata entry. A null value is ignored.
     /// </summary>
-    /// <param name="error">The current error.</param>
-    /// <param name="key">The metadata key to add or update.</param>
-    /// <param name="metadata">The metadata value to add or update.</param>
-    /// <typeparam name="T">The type of the metadata value.</typeparam>
-    /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata<T>(this Error error, string key, T? metadata)
     {
         var mergedMetadata = CopyOrEmpty(error.Metadata);
 
         if (metadata is not null)
-            mergedMetadata[key] = metadata; // Override existing keys
+            mergedMetadata[key] = metadata;
 
         return Error.Create(error.Type, error.Code, error.Message, mergedMetadata);
     }
@@ -92,13 +76,9 @@ public static class ErrorExtensions
     }
 
     /// <summary>
-    /// Creates a new <see cref="Error"/> by adding or updating metadata using the full type name of the metadata as the key.
-    /// The fully-qualified name (namespace + type) is used to avoid silent collisions between types that share a simple name across namespaces.
+    /// Adds or overwrites a metadata entry keyed by the full name of <typeparamref name="T"/>.
+    /// The namespace is included so types sharing a simple name do not collide. A null value is ignored.
     /// </summary>
-    /// <param name="error">The current error.</param>
-    /// <param name="metadata">The metadata value to add or update.</param>
-    /// <typeparam name="T">The type of the metadata value.</typeparam>
-    /// <returns>A new <see cref="Error"/> with the updated metadata.</returns>
     public static Error WithMetadata<T>(this Error error, T? metadata)
     {
         if (metadata is null)

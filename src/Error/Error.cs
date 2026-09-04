@@ -3,7 +3,7 @@ using System.Collections.ObjectModel;
 namespace BetterResult;
 
 /// <summary>
-/// Represents an error.
+/// A failure: a type, a code, a message, and optional metadata.
 /// </summary>
 public readonly partial record struct Error
 {
@@ -30,42 +30,36 @@ public readonly partial record struct Error
     }
 
     /// <summary>
-    /// Gets the unique error code.
+    /// The error code, for example an HTTP status or a localization key.
     /// </summary>
     public string Code { get; }
 
     /// <summary>
-    /// Gets the error message.
+    /// The error description.
     /// </summary>
     public string Message { get; }
 
     /// <summary>
-    /// Gets the error type.
+    /// The error category.
     /// </summary>
     public ErrorType Type { get; }
 
     /// <summary>
-    /// Gets the metadata.
+    /// Optional context. Read-only: use the <c>WithMetadata</c> extensions to get a copy with more entries.
     /// </summary>
     /// <remarks>
-    /// Metadata participates in <see cref="Equals(Error)"/>/<see cref="GetHashCode"/> by reference,
-    /// not by content. Identity-style comparisons should rely on <see cref="Type"/>, <see cref="Code"/>,
-    /// and <see cref="Message"/> rather than expecting two independently-constructed errors with
-    /// equivalent metadata to compare equal.
+    /// Metadata compares by reference in <see cref="Equals(Error)"/> and <see cref="GetHashCode"/>, not by
+    /// content. Two errors built separately with equivalent metadata are not equal, so compare
+    /// <see cref="Type"/>, <see cref="Code"/>, and <see cref="Message"/> instead.
     /// </remarks>
     public IReadOnlyDictionary<string, object>? Metadata { get; }
 
     /// <summary>
-    /// Retrieves the metadata value associated with the given key, or returns <c>default(T)</c> if the key is not present.
+    /// Gets the metadata value for <paramref name="key"/>, or <c>default(T)</c> if there is none.
     /// </summary>
-    /// <typeparam name="T">The expected type of the metadata value.</typeparam>
-    /// <param name="key">The key of the metadata entry to retrieve.</param>
-    /// <returns>
-    /// The metadata value cast to <typeparamref name="T"/>, or <c>default(T)</c> if the metadata dictionary is <c>null</c> or the key does not exist.
-    /// </returns>
-    /// <exception cref="InvalidCastException">
-    /// Thrown if the metadata value exists but cannot be cast to <typeparamref name="T"/>.
-    /// </exception>
+    /// <typeparam name="T">The expected type of the value.</typeparam>
+    /// <param name="key">The metadata key.</param>
+    /// <exception cref="InvalidCastException">The value exists but is not a <typeparamref name="T"/>.</exception>
     public T? GetMetadata<T>(string key)
     {
         if (Metadata is null || !Metadata.TryGetValue(key, out var value))
@@ -79,13 +73,9 @@ public readonly partial record struct Error
     }
 
     /// <summary>
-    /// Retrieves the first metadata value that can be cast to the specified type, or returns <c>default(T)</c> if none is found.
+    /// Gets the first metadata value of type <typeparamref name="T"/>, or <c>default(T)</c> if there is none.
     /// </summary>
-    /// <typeparam name="T">The type of the metadata value to search for.</typeparam>
-    /// <returns>
-    /// The first metadata value cast to <typeparamref name="T"/>,
-    /// or <c>default(T)</c> if the metadata dictionary is <c>null</c> or contains no entries of the requested type.
-    /// </returns>
+    /// <typeparam name="T">The type to look for.</typeparam>
     public T? GetMetadata<T>()
     {
         if (Metadata is null)

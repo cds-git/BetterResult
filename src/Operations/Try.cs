@@ -9,20 +9,20 @@ public partial record Result<T>
     private static Error InvokeErrorMapper(Func<Exception, Error> errorMapper, Exception ex)
     {
         var mapped = errorMapper(ex);
-        // Guard: a buggy mapper that returns default(Error) would otherwise throw
-        // ArgumentException out of the catch via the implicit Error->Result conversion,
-        // breaking Try's "doesn't throw on user code" contract.
+        // A mapper returning default(Error) would throw ArgumentException out of the catch block via
+        // the implicit Error->Result conversion, breaking Try's promise never to throw.
         return mapped.Code is null ? CreateExceptionError(ex) : mapped;
     }
 
     /// <summary>
-    /// Transforms the value in a successful result by applying an operation that may throw an exception.
-    /// If the current result is a failure, the error is propagated without executing the operation.
-    /// If an exception is thrown during the operation, returns a failure result with an Unexpected error.
+    /// Runs an operation that may throw and converts any exception into an <c>Unexpected</c> error
+    /// carrying the exception message and type. A failure passes through and the operation never runs.
     /// </summary>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="operation">The operation to apply to the current value if the result is successful.</param>
-    /// <returns>A result containing the new value if successful, or an error if the operation throws or the current result is failed.</returns>
+    /// <remarks>
+    /// Stack traces are left out on purpose: they leak file paths and internal call structure if the
+    /// error crosses a trust boundary. Use the <c>errorMapper</c> overload if you need them.
+    /// <see cref="OperationCanceledException"/> is not caught, so cooperative cancellation keeps working.
+    /// </remarks>
     public Result<U> Try<U>(Func<T, U> operation)
     {
         if (IsFailure) return Error;
@@ -38,16 +38,10 @@ public partial record Result<T>
     }
 
     /// <summary>
-    /// Transforms the value in a successful result by applying an operation that may throw an exception, using a custom error mapper.
-    /// If the current result is a failure, the error is propagated without executing the operation.
-    /// If an exception is thrown during the operation, the error mapper is called to create the error.
-    /// If the mapper returns <c>default(Error)</c>, a synthesized Unexpected error is used instead so that
-    /// <c>Try</c> never throws.
+    /// Runs an operation that may throw and turns any exception into an error via
+    /// <paramref name="errorMapper"/>. If the mapper returns <c>default(Error)</c> the standard
+    /// <c>Unexpected</c> error is used instead, so <c>Try</c> never throws.
     /// </summary>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="operation">The operation to apply to the current value if the result is successful.</param>
-    /// <param name="errorMapper">A function to convert the exception to an Error.</param>
-    /// <returns>A result containing the new value if successful, or an error if the operation throws or the current result is failed.</returns>
     public Result<U> Try<U>(Func<T, U> operation, Func<Exception, Error> errorMapper)
     {
         if (IsFailure) return Error;
@@ -62,14 +56,7 @@ public partial record Result<T>
         }
     }
 
-    /// <summary>
-    /// Asynchronously transforms the value in a successful result by applying an operation that may throw an exception.
-    /// If the current result is a failure, the error is propagated without executing the operation.
-    /// If an exception is thrown during the operation, returns a failure result with an Unexpected error.
-    /// </summary>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="operation">The asynchronous operation to apply to the current value if the result is successful.</param>
-    /// <returns>A task containing a result with the new value if successful, or an error if the operation throws or the current result is failed.</returns>
+    /// <inheritdoc cref="Try{U}(Func{T, U})"/>
     public async Task<Result<U>> TryAsync<U>(Func<T, Task<U>> operation)
     {
         if (IsFailure) return Error;
@@ -84,17 +71,7 @@ public partial record Result<T>
         }
     }
 
-    /// <summary>
-    /// Asynchronously transforms the value in a successful result by applying an operation that may throw an exception, using a custom error mapper.
-    /// If the current result is a failure, the error is propagated without executing the operation.
-    /// If an exception is thrown during the operation, the error mapper is called to create the error.
-    /// If the mapper returns <c>default(Error)</c>, a synthesized Unexpected error is used instead so that
-    /// <c>TryAsync</c> never throws.
-    /// </summary>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="operation">The asynchronous operation to apply to the current value if the result is successful.</param>
-    /// <param name="errorMapper">A function to convert the exception to an Error.</param>
-    /// <returns>A task containing a result with the new value if successful, or an error if the operation throws or the current result is failed.</returns>
+    /// <inheritdoc cref="Try{U}(Func{T, U}, Func{Exception, Error})"/>
     public async Task<Result<U>> TryAsync<U>(Func<T, Task<U>> operation, Func<Exception, Error> errorMapper)
     {
         if (IsFailure) return Error;
@@ -111,56 +88,26 @@ public partial record Result<T>
 }
 
 /// <summary>
-/// Provides extension methods for async operations on Task-wrapped Results with exception handling.
+/// <c>Try</c> for results that are still inside a task.
 /// </summary>
 public static class TryExtensions
 {
-    /// <summary>
-    /// Asynchronously applies an exception-throwing operation on a Task-wrapped Result with a synchronous function.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the input result.</typeparam>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="result">The task containing the result to operate on.</param>
-    /// <param name="operation">The operation to apply to the current value if the result is successful.</param>
-    /// <returns>A task containing a result with the new value if successful, or an error if the operation throws or the current result is failed.</returns>
+    /// <inheritdoc cref="Result{T}.Try{U}(Func{T, U})"/>
     public static async Task<Result<U>> TryAsync<T, U>(
         this Task<Result<T>> result, Func<T, U> operation) =>
             (await result.ConfigureAwait(false)).Try(operation);
 
-    /// <summary>
-    /// Asynchronously applies an exception-throwing operation on a Task-wrapped Result with a synchronous function and custom error mapper.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the input result.</typeparam>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="result">The task containing the result to operate on.</param>
-    /// <param name="operation">The operation to apply to the current value if the result is successful.</param>
-    /// <param name="errorMapper">A function to convert the exception to an Error.</param>
-    /// <returns>A task containing a result with the new value if successful, or an error if the operation throws or the current result is failed.</returns>
+    /// <inheritdoc cref="Result{T}.Try{U}(Func{T, U}, Func{Exception, Error})"/>
     public static async Task<Result<U>> TryAsync<T, U>(
         this Task<Result<T>> result, Func<T, U> operation, Func<Exception, Error> errorMapper) =>
             (await result.ConfigureAwait(false)).Try(operation, errorMapper);
 
-    /// <summary>
-    /// Asynchronously applies an exception-throwing operation on a Task-wrapped Result with an asynchronous function.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the input result.</typeparam>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="result">The task containing the result to operate on.</param>
-    /// <param name="operation">The asynchronous operation to apply to the current value if the result is successful.</param>
-    /// <returns>A task containing a result with the new value if successful, or an error if the operation throws or the current result is failed.</returns>
+    /// <inheritdoc cref="Result{T}.Try{U}(Func{T, U})"/>
     public static async Task<Result<U>> TryAsync<T, U>(
         this Task<Result<T>> result, Func<T, Task<U>> operation) =>
             await (await result.ConfigureAwait(false)).TryAsync(operation).ConfigureAwait(false);
 
-    /// <summary>
-    /// Asynchronously applies an exception-throwing operation on a Task-wrapped Result with an asynchronous function and custom error mapper.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the input result.</typeparam>
-    /// <typeparam name="U">The type of the value in the returned result.</typeparam>
-    /// <param name="result">The task containing the result to operate on.</param>
-    /// <param name="operation">The asynchronous operation to apply to the current value if the result is successful.</param>
-    /// <param name="errorMapper">A function to convert the exception to an Error.</param>
-    /// <returns>A task containing a result with the new value if successful, or an error if the operation throws or the current result is failed.</returns>
+    /// <inheritdoc cref="Result{T}.Try{U}(Func{T, U}, Func{Exception, Error})"/>
     public static async Task<Result<U>> TryAsync<T, U>(
         this Task<Result<T>> result, Func<T, Task<U>> operation, Func<Exception, Error> errorMapper) =>
             await (await result.ConfigureAwait(false)).TryAsync(operation, errorMapper).ConfigureAwait(false);

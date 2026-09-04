@@ -3,16 +3,15 @@ namespace BetterResult;
 public partial record Result<T>
 {
     /// <summary>
-    /// Attempts to recover from any failure by applying a recovery function.
-    /// If the current result is successful, the result passes through unchanged.
+    /// Turns any failure into whatever <paramref name="recovery"/> returns. A success passes through
+    /// untouched.
     /// </summary>
     /// <remarks>
-    /// This is the unconditional form of recovery. The recovery function may itself return a failure
-    /// (useful for "try a fallback that might also fail" patterns). To recover only from specific
-    /// errors, use the <see cref="ErrorType"/>, error-type set, or predicate overloads.
+    /// The recovery function may return another failure, which is useful for fallbacks that can
+    /// themselves fail. Use the <see cref="ErrorType"/>, error-type set, or predicate overloads to
+    /// recover from specific errors only. Unlike <c>MapError</c>, which only relabels an error,
+    /// <c>Recover</c> can get back to a success.
     /// </remarks>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>The recovery result if the current result is a failure, or the original successful result unchanged.</returns>
     public Result<T> Recover(Func<Error, Result<T>> recovery)
     {
         if (IsSuccess) return this;
@@ -20,12 +19,9 @@ public partial record Result<T>
     }
 
     /// <summary>
-    /// Attempts to recover from a failure by applying a recovery function if the error matches the specified type.
-    /// If the current result is successful or the error type doesn't match, the result passes through unchanged.
+    /// Recovers only when the error is of <paramref name="errorType"/>. Anything else passes through
+    /// untouched.
     /// </summary>
-    /// <param name="errorType">The error type to match for recovery.</param>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>The recovery result if the error type matches, or the original result unchanged.</returns>
     public Result<T> Recover(ErrorType errorType, Func<Error, Result<T>> recovery)
     {
         if (IsSuccess) return this;
@@ -34,12 +30,9 @@ public partial record Result<T>
     }
 
     /// <summary>
-    /// Attempts to recover from a failure by applying a recovery function if the error matches any of the specified types.
-    /// If the current result is successful or the error type isn't in the set, the result passes through unchanged.
+    /// Recovers only when the error is one of <paramref name="errorTypes"/>. Anything else passes
+    /// through untouched.
     /// </summary>
-    /// <param name="errorTypes">The error types to match for recovery.</param>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>The recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
     public Result<T> Recover(IEnumerable<ErrorType> errorTypes, Func<Error, Result<T>> recovery)
     {
         if (IsSuccess) return this;
@@ -48,12 +41,9 @@ public partial record Result<T>
     }
 
     /// <summary>
-    /// Attempts to recover from a failure by applying a recovery function if the error satisfies the predicate.
-    /// If the current result is successful or the predicate returns false, the result passes through unchanged.
+    /// Recovers only when the error satisfies <paramref name="predicate"/>. Anything else passes
+    /// through untouched.
     /// </summary>
-    /// <param name="predicate">The predicate to evaluate against the error.</param>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>The recovery result if the predicate is satisfied, or the original result unchanged.</returns>
     public Result<T> Recover(Func<Error, bool> predicate, Func<Error, Result<T>> recovery)
     {
         if (IsSuccess) return this;
@@ -62,12 +52,9 @@ public partial record Result<T>
     }
 
     /// <summary>
-    /// Attempts to recover from a failure by providing a fallback value if the error matches the specified type.
-    /// If the current result is successful or the error type doesn't match, the result passes through unchanged.
+    /// Falls back to <paramref name="fallbackValue"/> when the error is of <paramref name="errorType"/>.
+    /// Anything else passes through untouched.
     /// </summary>
-    /// <param name="errorType">The error type to match for recovery.</param>
-    /// <param name="fallbackValue">The fallback value to use for recovery.</param>
-    /// <returns>A successful result with the fallback value if the error type matches, or the original result unchanged.</returns>
     public Result<T> Recover(ErrorType errorType, T fallbackValue)
     {
         if (IsSuccess) return this;
@@ -76,12 +63,9 @@ public partial record Result<T>
     }
 
     /// <summary>
-    /// Attempts to recover from a failure by providing a fallback value if the error matches any of the specified types.
-    /// If the current result is successful or the error type isn't in the set, the result passes through unchanged.
+    /// Falls back to <paramref name="fallbackValue"/> when the error is one of
+    /// <paramref name="errorTypes"/>. Anything else passes through untouched.
     /// </summary>
-    /// <param name="errorTypes">The error types to match for recovery.</param>
-    /// <param name="fallbackValue">The fallback value to use for recovery.</param>
-    /// <returns>A successful result with the fallback value if the error type matches any of the supplied types, or the original result unchanged.</returns>
     public Result<T> Recover(IEnumerable<ErrorType> errorTypes, T fallbackValue)
     {
         if (IsSuccess) return this;
@@ -89,25 +73,14 @@ public partial record Result<T>
         return fallbackValue;
     }
 
-    /// <summary>
-    /// Asynchronously attempts to recover from any failure by applying a recovery function.
-    /// If the current result is successful, the result passes through unchanged.
-    /// </summary>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the current result is a failure, or the original successful result unchanged.</returns>
+    /// <inheritdoc cref="Recover(Func{Error, Result{T}})"/>
     public async Task<Result<T>> RecoverAsync(Func<Error, Task<Result<T>>> recoveryAsync)
     {
         if (IsSuccess) return this;
         return await recoveryAsync(Error).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Asynchronously attempts to recover from a failure by applying a recovery function if the error matches the specified type.
-    /// If the current result is successful or the error type doesn't match, the result passes through unchanged.
-    /// </summary>
-    /// <param name="errorType">The error type to match for recovery.</param>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the error type matches, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Recover(ErrorType, Func{Error, Result{T}})"/>
     public async Task<Result<T>> RecoverAsync(ErrorType errorType, Func<Error, Task<Result<T>>> recoveryAsync)
     {
         if (IsSuccess) return this;
@@ -115,13 +88,7 @@ public partial record Result<T>
         return await recoveryAsync(Error).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Asynchronously attempts to recover from a failure by applying a recovery function if the error matches any of the specified types.
-    /// If the current result is successful or the error type isn't in the set, the result passes through unchanged.
-    /// </summary>
-    /// <param name="errorTypes">The error types to match for recovery.</param>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Recover(IEnumerable{ErrorType}, Func{Error, Result{T}})"/>
     public async Task<Result<T>> RecoverAsync(IEnumerable<ErrorType> errorTypes, Func<Error, Task<Result<T>>> recoveryAsync)
     {
         if (IsSuccess) return this;
@@ -129,13 +96,7 @@ public partial record Result<T>
         return await recoveryAsync(Error).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Asynchronously attempts to recover from a failure by applying a recovery function if the error satisfies the predicate.
-    /// If the current result is successful or the predicate returns false, the result passes through unchanged.
-    /// </summary>
-    /// <param name="predicate">The predicate to evaluate against the error.</param>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the predicate is satisfied, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Recover(Func{Error, bool}, Func{Error, Result{T}})"/>
     public async Task<Result<T>> RecoverAsync(Func<Error, bool> predicate, Func<Error, Task<Result<T>>> recoveryAsync)
     {
         if (IsSuccess) return this;
@@ -145,17 +106,11 @@ public partial record Result<T>
 }
 
 /// <summary>
-/// Provides extension methods for recovering from errors on Task-wrapped Result instances.
+/// <c>Recover</c> for results that are still inside a task.
 /// </summary>
 public static class RecoverExtensions
 {
-    /// <summary>
-    /// Asynchronously recovers from any failure by applying a recovery function.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the current result is a failure, or the original successful result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         Func<Error, Result<T>> recovery)
@@ -164,13 +119,7 @@ public static class RecoverExtensions
         return result.Recover(recovery);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from any failure by applying an asynchronous recovery function.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the current result is a failure, or the original successful result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         Func<Error, Task<Result<T>>> recoveryAsync)
@@ -179,14 +128,7 @@ public static class RecoverExtensions
         return await result.RecoverAsync(recoveryAsync).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by applying a recovery function if the error matches the specified type.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="errorType">The error type to match for recovery.</param>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the error type matches, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(ErrorType, Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         ErrorType errorType,
@@ -196,14 +138,7 @@ public static class RecoverExtensions
         return result.Recover(errorType, recovery);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by applying a recovery function if the error matches any of the specified types.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="errorTypes">The error types to match for recovery.</param>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(IEnumerable{ErrorType}, Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         IEnumerable<ErrorType> errorTypes,
@@ -213,14 +148,7 @@ public static class RecoverExtensions
         return result.Recover(errorTypes, recovery);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by applying a recovery function if the error satisfies the predicate.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="predicate">The predicate to evaluate against the error.</param>
-    /// <param name="recovery">The function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the predicate is satisfied, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(Func{Error, bool}, Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         Func<Error, bool> predicate,
@@ -230,14 +158,7 @@ public static class RecoverExtensions
         return result.Recover(predicate, recovery);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by providing a fallback value if the error matches the specified type.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="errorType">The error type to match for recovery.</param>
-    /// <param name="fallbackValue">The fallback value to use for recovery.</param>
-    /// <returns>A task containing a successful result with the fallback value if the error type matches, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(ErrorType, T)"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         ErrorType errorType,
@@ -247,14 +168,7 @@ public static class RecoverExtensions
         return result.Recover(errorType, fallbackValue);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by providing a fallback value if the error matches any of the specified types.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="errorTypes">The error types to match for recovery.</param>
-    /// <param name="fallbackValue">The fallback value to use for recovery.</param>
-    /// <returns>A task containing a successful result with the fallback value if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(IEnumerable{ErrorType}, T)"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         IEnumerable<ErrorType> errorTypes,
@@ -264,14 +178,7 @@ public static class RecoverExtensions
         return result.Recover(errorTypes, fallbackValue);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by applying an asynchronous recovery function if the error matches the specified type.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="errorType">The error type to match for recovery.</param>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the error type matches, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(ErrorType, Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         ErrorType errorType,
@@ -281,14 +188,7 @@ public static class RecoverExtensions
         return await result.RecoverAsync(errorType, recoveryAsync).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by applying an asynchronous recovery function if the error matches any of the specified types.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="errorTypes">The error types to match for recovery.</param>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the error type matches any of the supplied types, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(IEnumerable{ErrorType}, Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         IEnumerable<ErrorType> errorTypes,
@@ -298,14 +198,7 @@ public static class RecoverExtensions
         return await result.RecoverAsync(errorTypes, recoveryAsync).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Asynchronously recovers from a failure by applying an asynchronous recovery function if the error satisfies the predicate.
-    /// </summary>
-    /// <typeparam name="T">The type of the value in the result.</typeparam>
-    /// <param name="resultTask">The task containing the result to recover from.</param>
-    /// <param name="predicate">The predicate to evaluate against the error.</param>
-    /// <param name="recoveryAsync">The asynchronous function to apply to the error to produce a recovery result.</param>
-    /// <returns>A task containing the recovery result if the predicate is satisfied, or the original result unchanged.</returns>
+    /// <inheritdoc cref="Result{T}.Recover(Func{Error, bool}, Func{Error, Result{T}})"/>
     public static async Task<Result<T>> RecoverAsync<T>(
         this Task<Result<T>> resultTask,
         Func<Error, bool> predicate,

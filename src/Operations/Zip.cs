@@ -1,48 +1,31 @@
 namespace BetterResult;
 
 /// <summary>
-/// Provides extension methods for combining Results using Zip.
+/// A fluent two-result <c>Combine</c>. Use <c>Result.Combine</c> when you have three or more at once.
 /// </summary>
 public static class ZipExtensions
 {
     /// <summary>
-    /// Combines this Result with another Result into a single Result containing a tuple of both values.
-    /// Returns success only if both Results are successful, otherwise returns the first error encountered.
-    /// This is a fluent wrapper around Result.Combine for 2 parameters.
+    /// Combines two results into one holding a tuple of both values, or the first error.
     /// </summary>
-    /// <typeparam name="T">The type of value in the first Result.</typeparam>
-    /// <typeparam name="TOther">The type of value in the other Result.</typeparam>
-    /// <param name="result">The first Result to combine.</param>
-    /// <param name="other">The other Result to combine with.</param>
-    /// <returns>A Result containing a tuple of both values if both succeed, or the first error encountered.</returns>
     public static Result<(T, TOther)> Zip<T, TOther>(this Result<T> result, Result<TOther> other) =>
         Result.Combine(result, other);
 
     /// <summary>
-    /// Combines this Result with another Result and applies a selector function to produce a new Result.
-    /// Returns success only if both Results are successful, otherwise returns the first error encountered.
-    /// This is a fluent wrapper around Result.Combine for 2 parameters with projection.
+    /// Combines two results and feeds both values to <paramref name="selector"/>, or returns the first
+    /// error.
     /// </summary>
-    /// <typeparam name="T">The type of value in the first Result.</typeparam>
-    /// <typeparam name="TOther">The type of value in the other Result.</typeparam>
-    /// <typeparam name="TResult">The type of the result after applying the selector.</typeparam>
-    /// <param name="result">The first Result to combine.</param>
-    /// <param name="other">The other Result to combine with.</param>
-    /// <param name="selector">The function to apply to both values.</param>
-    /// <returns>A Result containing the transformed value if both succeed, or the first error encountered.</returns>
     public static Result<TResult> Zip<T, TOther, TResult>(this Result<T> result, Result<TOther> other, Func<T, TOther, TResult> selector) =>
         Result.Combine(result, other, selector);
 }
 
 /// <summary>
-/// Provides extension methods for combining Task-wrapped Results using Zip.
+/// <see cref="ZipExtensions.Zip{T, TOther}"/> for results that are still inside a task. Each task is
+/// awaited in turn, so start them beforehand if you want them running in parallel.
 /// </summary>
 public static class ZipTaskExtensions
 {
-    /// <summary>
-    /// Combines a Task-wrapped Result with another Result into a single Result containing a tuple of both values.
-    /// Awaits the task, then combines with the other Result.
-    /// </summary>
+    /// <inheritdoc cref="ZipExtensions.Zip{T, TOther}(Result{T}, Result{TOther})"/>
     public static async Task<Result<(T, TOther)>> Zip<T, TOther>(
         this Task<Result<T>> resultTask,
         Result<TOther> other)
@@ -51,10 +34,7 @@ public static class ZipTaskExtensions
         return result.Zip(other);
     }
 
-    /// <summary>
-    /// Combines a Task-wrapped Result with another Result and applies a selector function.
-    /// Awaits the task, then combines with the other Result.
-    /// </summary>
+    /// <inheritdoc cref="ZipExtensions.Zip{T, TOther, TResult}(Result{T}, Result{TOther}, Func{T, TOther, TResult})"/>
     public static async Task<Result<TResult>> Zip<T, TOther, TResult>(
         this Task<Result<T>> resultTask,
         Result<TOther> other,
@@ -64,10 +44,7 @@ public static class ZipTaskExtensions
         return result.Zip(other, selector);
     }
 
-    /// <summary>
-    /// Combines a Task-wrapped Result with another Task-wrapped Result into a single Result containing a tuple of both values.
-    /// Awaits the first task, then awaits the second task, then combines.
-    /// </summary>
+    /// <inheritdoc cref="ZipExtensions.Zip{T, TOther}(Result{T}, Result{TOther})"/>
     public static async Task<Result<(T, TOther)>> Zip<T, TOther>(
         this Task<Result<T>> resultTask,
         Task<Result<TOther>> otherTask)
@@ -77,10 +54,7 @@ public static class ZipTaskExtensions
         return result.Zip(other);
     }
 
-    /// <summary>
-    /// Combines a Task-wrapped Result with another Task-wrapped Result and applies a selector function.
-    /// Awaits the first task, then awaits the second task, then combines.
-    /// </summary>
+    /// <inheritdoc cref="ZipExtensions.Zip{T, TOther, TResult}(Result{T}, Result{TOther}, Func{T, TOther, TResult})"/>
     public static async Task<Result<TResult>> Zip<T, TOther, TResult>(
         this Task<Result<T>> resultTask,
         Task<Result<TOther>> otherTask,
@@ -92,8 +66,8 @@ public static class ZipTaskExtensions
     }
 
     /// <summary>
-    /// Combines a Task-wrapped Result with another Task-wrapped Result and applies an async selector function.
-    /// Awaits both tasks, then applies the async selector.
+    /// Combines two results and feeds both values to an async <paramref name="selector"/>, or returns
+    /// the first error.
     /// </summary>
     public static async Task<Result<TResult>> ZipAsync<T, TOther, TResult>(
         this Task<Result<T>> resultTask,
@@ -110,10 +84,7 @@ public static class ZipTaskExtensions
         return value;
     }
 
-    /// <summary>
-    /// Combines a Result with another Task-wrapped Result and applies an async selector function.
-    /// Awaits the task, then applies the async selector.
-    /// </summary>
+    /// <inheritdoc cref="ZipAsync{T, TOther, TResult}(Task{Result{T}}, Task{Result{TOther}}, Func{T, TOther, Task{TResult}})"/>
     public static async Task<Result<TResult>> ZipAsync<T, TOther, TResult>(
         this Result<T> result,
         Task<Result<TOther>> otherTask,

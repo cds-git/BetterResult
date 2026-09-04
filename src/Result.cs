@@ -3,7 +3,7 @@ using System.Text;
 namespace BetterResult;
 
 /// <summary>
-/// A discriminated union of a value or an error.
+/// Holds either a value or an <see cref="Error"/>, never both.
 /// </summary>
 /// <typeparam name="T">The type of the underlying <see cref="Value"/>.</typeparam>
 public partial record Result<T>
@@ -31,59 +31,54 @@ public partial record Result<T>
     }
 
     /// <summary>
-    /// Gets a value indicating whether the state is success.
+    /// True when the result holds a value.
     /// </summary>
     public bool IsSuccess => !IsFailure;
 
     /// <summary>
-    /// Gets a value indicating whether the state is error.
+    /// True when the result holds an error.
     /// </summary>
     public bool IsFailure { get; }
 
     /// <summary>
-    /// Gets the error.
+    /// The error. Check <see cref="IsFailure"/> first.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when no errors are present.</exception>
+    /// <exception cref="InvalidOperationException">The result is a success.</exception>
     public Error Error => IsFailure
         ? (Error)_error!
         : throw new InvalidOperationException("Cannot access the error when the result is of type success. Check IsFailure before accessing Error!");
 
     /// <summary>
-    /// Gets the value.
+    /// The value. Check <see cref="IsSuccess"/> first.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when no value is present.</exception>
+    /// <exception cref="InvalidOperationException">The result is a failure.</exception>
     public T Value => IsFailure
         ? throw new InvalidOperationException($"Cannot access the value when result is of type failure. Check IsFailure before accessing value! {Error}")
         : _value!;
 
     /// <summary>
-    /// Creates a <see cref="Result{T}"/> from a value.
+    /// Wraps a value in a successful result.
     /// </summary>
     public static implicit operator Result<T>(T value) => new(value);
 
     /// <summary>
-    /// Creates a <see cref="Result{T}"/> from an error.
+    /// Wraps an error in a failed result.
     /// </summary>
     public static implicit operator Result<T>(Error error) => new(error);
 
     /// <summary>
-    /// Creates a successful result containing the specified value.
+    /// Creates a successful result holding <paramref name="value"/>.
     /// </summary>
-    /// <param name="value">The value of the successful result.</param>
-    /// <returns>A successful <see cref="Result{T}"/> instance containing the provided value.</returns>
     public static Result<T> Success(T value) => new(value);
 
     /// <summary>
-    /// Creates a failure result with the specified error.
+    /// Creates a failed result holding <paramref name="error"/>.
     /// </summary>
-    /// <param name="error">The <see cref="Error"/> associated with the failure.</param>
-    /// <returns>A failed <see cref="Result{T}"/> instance containing the provided error.</returns>
     public static Result<T> Failure(Error error) => new(error);
 
     /// <summary>
-    /// Renders only the side that is actually populated. The default record-synthesized
-    /// implementation accesses every property, but <see cref="Value"/> throws on failure
-    /// and <see cref="Error"/> throws on success, so the synthesized version always throws.
+    /// Prints only the side that is populated. The record-synthesized version reads every property,
+    /// and one of <see cref="Value"/> and <see cref="Error"/> always throws.
     /// </summary>
     protected virtual bool PrintMembers(StringBuilder builder)
     {

@@ -539,7 +539,7 @@ public class RecoverTests
     [Fact]
     public void Recover_WithErrorTypes_Should_HandleSeveralErrorsWithOneHandler()
     {
-        // Arrange — three failures, three different types, all retryable, one shared handler
+        // Arrange: three failures of different types, all retryable, one shared handler
         ErrorType[] retryable = [ErrorType.Timeout, ErrorType.Unavailable, ErrorType.Conflict];
 
         var timeout = Result<int>.Failure(Error.Timeout("T", "timed out")).Recover(retryable, _ => 1);

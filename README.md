@@ -2,443 +2,254 @@
 
 [![NuGet](https://img.shields.io/nuget/v/BetterResult.svg)](https://www.nuget.org/packages/BetterResult) [![BuildStatus](https://github.com/cds-git/BetterResult/actions/workflows/dotnet.yml/badge.svg)](https://github.com/cds-git/BetterResult/actions/workflows/dotnet.yml)
 
-**BetterResult** is a lightweight library that adopts a functional programming approach to error handling. 
-By representing both successes and errors as explicit values, 
-it forces developers to acknowledge and manage errors at every step, resulting in clearer, more robust, and maintainable code.
-
----
+A small Result type for C#. Instead of throwing for expected failures, a method returns a
+`Result<T>` that holds either a value or an `Error`, so the failure path shows up in the signature
+and the compiler keeps you honest about handling it.
 
 ## Table of Contents
 
 - [Installation](#installation)
-- [Why Use The Result Pattern?](#why-use-the-result-pattern)
+- [Why the Result pattern](#why-the-result-pattern)
 - [Usage](#usage)
+  - [Result&lt;T&gt;](#resultt)
+  - [Operations without a return value](#operations-without-a-return-value)
 - [Operations](#operations)
-  - [Bind - Monadic Chaining](#bind---monadic-chaining)
-  - [Map - Value Transformation](#map---value-transformation)
-  - [MapError - Error Translation](#maperror---error-translation)
-  - [Tap - Side Effects on Success](#tap---side-effects-on-success)
-  - [TapError - Side Effects on Failure](#taperror---side-effects-on-failure)
-  - [TapAlways - Side Effects on Both Branches](#tapalways---side-effects-on-both-branches)
-  - [Match - Result Folding](#match---result-folding)
-  - [Try - Exception Handling](#try---exception-handling)
-  - [Ensure - Validation Guards](#ensure---validation-guards)
-  - [Recover - Error Recovery](#recover---error-recovery)
-  - [Sequence - Collection Aggregation](#sequence---collection-aggregation)
-  - [Traverse - Transform and Collect](#traverse---transform-and-collect)
-  - [Partition - Separate Successes from Failures](#partition---separate-successes-from-failures)
-  - [Combine - Combine Multiple Independent Results](#combine---combine-multiple-independent-results)
-  - [Zip - Fluent Result Combination](#zip---fluent-result-combination)
-- [Error Type](#error-type)
-- [Credits - Inspiration](#credits---inspiration)
-
----
+  - [Bind](#bind)
+  - [Map](#map)
+  - [MapError](#maperror)
+  - [Tap](#tap)
+  - [TapError](#taperror)
+  - [TapAlways](#tapalways)
+  - [Match](#match)
+  - [Try](#try)
+  - [Ensure](#ensure)
+  - [Recover](#recover)
+  - [Sequence](#sequence)
+  - [Traverse](#traverse)
+  - [Partition](#partition)
+  - [Combine](#combine)
+  - [Zip](#zip)
+- [Error](#error)
+- [Credits](#credits)
 
 ## Installation
-
-You can install the **BetterResult** NuGet package via the NuGet Package Manager, .NET CLI, or by adding the package reference to your `.csproj` file.
-
-### .NET CLI
 
 ```bash
 dotnet add package BetterResult
 ```
 
-### NuGet Package Manager
-
-```bash
-Install-Package BetterResult
-```
-
-### Package Reference
+Or add the reference directly:
 
 ```xml
 <PackageReference Include="BetterResult" Version="x.x.x" />
 ```
 
-Replace `x.x.x` with the latest version available on [NuGet](https://www.nuget.org/packages/BetterResult).
+Replace `x.x.x` with the latest version on [NuGet](https://www.nuget.org/packages/BetterResult).
 
----
+Targets `netstandard2.0` and `net10.0`.
 
-## Why Use The Result Pattern?
+## Why the Result pattern
 
-The Result Pattern revolutionizes error handling by treating both successes and failures as explicit, first-class values in your type system. 
-This functional approach eliminates the unpredictability of exceptions while forcing developers to consciously handle every possible failure scenario.
-
-### The Problem with Traditional Exception Handling
+Exceptions hide the failure paths. Nothing in the signature tells the caller what can go wrong:
 
 ```csharp
-// Traditional approach - hidden failure paths
 public User GetUser(int id)
 {
-    var user = database.FindUser(id); // Could throw SqlException
-    if (user == null) 
-        throw new UserNotFoundException(); // Could throw
-    
-    ValidateUser(user); // Could throw ValidationException
-    return user; // Success path unclear
+    var user = database.FindUser(id);      // may throw SqlException
+    if (user is null)
+        throw new UserNotFoundException(); // may throw
+    ValidateUser(user);                    // may throw ValidationException
+    return user;
 }
 
-// Caller has no idea what could go wrong
-var user = GetUser(123); // 🎰 Mystery box of potential failures
+var user = GetUser(123); // no idea what can come back at you
 ```
 
-### The Result Pattern Solution
+With a Result the failure is part of the return type, so the caller has to deal with it:
 
 ```csharp
-// Result approach - explicit failure paths
 public Result<User> GetUser(int id) =>
-    FindUserInDatabase(id)                      // Result<User>
-        .Tap(user => ValidateUser(user))        // Side effect validation
-        .Tap(user => logger.LogSuccess(user));  // Side effects
+    FindUserInDatabase(id)
+        .Ensure(IsValid, Error.Validation("INVALID_USER", "User failed validation"))
+        .Tap(user => logger.LogSuccess(user));
 
-// Caller knows exactly what they're getting
-Result<User> userResult = GetUser(123); // 📦 Explicit success or failure
+Result<User> user = GetUser(123); // success or Error, nothing else
 ```
 
-### Key Benefits
-
-**🚀 Performance & Predictability**
-- Zero exception overhead - no stack traces or unwinding costs
-- Predictable control flow that's easy to reason about
-- Better JIT optimization opportunities
-
-**🛡️ Type-Safe Error Handling**
-- Compiler enforces error handling - forgotten error checks become compile errors
-- Self-documenting APIs that clearly communicate failure modes
-- Impossible to accidentally ignore errors
-
-**🔗 Functional Composition**
-- Chain operations seamlessly with automatic error propagation
-- Build complex pipelines from simple, testable functions
-- Error handling becomes part of the data flow, not separate control structures
-
-**🧪 Enhanced Testability**
-- Errors are just data - easy to create, assert, and verify in tests
-- No need for complex exception mocking or try-catch blocks in tests
-- Clear separation between business logic and error scenarios
-
-This pattern transforms error handling from a necessary evil into an elegant part of your application's architecture, 
-making your code more robust, maintainable, and enjoyable to work with.
-
----
+That buys you three things: failures compose along a pipeline instead of unwinding the stack,
+errors are plain data that is easy to assert on in tests, and expected failures cost nothing at
+runtime. Keep exceptions for the genuinely exceptional.
 
 ## Usage
 
-### Basic Usage
+### `Result<T>`
 
-#### `Result<T>`
+Holds either a value of type `T` or an `Error`.
 
-Represents either a successful outcome carrying a value of type `T` or a failure carrying an `Error`.
-
-**Creating Results:**
 ```csharp
-// Implicit conversions (recommended for clean code)
+// Implicit conversions
 Result<int> success = 42;
 Result<int> failure = Error.Failure("E001", "Invalid input");
 
-// Explicit factory methods
+// Explicit factories
 Result<int> explicitSuccess = Result.Success(100);
 Result<int> explicitFailure = Result.Failure<int>(Error.NotFound("E404", "User not found"));
-
-// From operations that might fail
-Result<User> GetUser(int id) =>
-    id > 0 
-        ? Result.Success(new User { Id = id, Name = "John" })
-        : Result.Failure<User>(Error.Validation("INVALID_ID", "User ID must be positive"));
 ```
 
-> **Note:** `Result<Error>` (where the success type *is* `Error`) is not supported via implicit conversion — the two implicit operators collapse to the same conversion signature and the compiler reports `CS0457`. Use `Result<Error>.Success(...)` / `Result<Error>.Failure(...)` explicitly if you need this combination.
+Read the value once you know which side you are on:
 
-**Working with Results:**
 ```csharp
-Result<int> CalculateAge(DateTime birthDate)
-{
-    if (birthDate > DateTime.Now)
-        return Error.Validation("FUTURE_DATE", "Birth date cannot be in the future");
-    
-    var age = DateTime.Now.Year - birthDate.Year;
-    return age; // Implicit conversion to Result<int>
-}
+Result<int> age = CalculateAge(birthDate);
 
-// Safe value access
-Result<int> ageResult = CalculateAge(new DateTime(1990, 5, 15));
-
-if (ageResult.IsSuccess)
-{
-    Console.WriteLine($"Age: {ageResult.Value}");
-    // Can safely access Value property
-}
+if (age.IsSuccess)
+    Console.WriteLine($"Age: {age.Value}");
 else
-{
-    Console.WriteLine($"Error: {ageResult.Error.Message}");
-    // Can safely access Error property
-}
+    Console.WriteLine($"Error: {age.Error.Message}");
+```
 
-// Functional pipeline (no manual checking needed)
-string description = ageResult
+`Value` throws if the result is a failure and `Error` throws if it is a success, so check
+`IsSuccess` or `IsFailure` first. Most of the time you do not need to: chain the operations below
+and end with `Match`.
+
+```csharp
+string description = CalculateAge(birthDate)
     .Map(age => age >= 18 ? "Adult" : "Minor")
-    .Map(category => $"Person is classified as: {category}")
     .Match(
-        success => success,
-        error => $"Could not determine age: {error.Message}"
-    );
+        category => $"Person is classified as: {category}",
+        error => $"Could not determine age: {error.Message}");
 ```
 
----
+> **Note:** `Result<Error>`, where the success type *is* `Error`, cannot use the implicit
+> conversions. Both operators collapse to the same signature and the compiler reports `CS0457`.
+> Use `Result<Error>.Success(...)` and `Result<Error>.Failure(...)` instead.
 
-### Operations Without Return Values
+### Operations without a return value
 
-Many operations succeed or fail without returning meaningful data - like deleting a record, sending an email, or updating a setting. For these cases, use `Result<NoValue>`.
-
-**What is NoValue?**
-
-`NoValue` is a special type that represents "no meaningful value". Think of it as a type-safe way to say "this operation succeeded, but there's nothing to return."
-
-```csharp
-// Simple example
-Result<NoValue> SendEmail(string to, string subject)
-{
-    if (string.IsNullOrEmpty(to))
-        return Error.Validation("EMPTY_TO", "Recipient required");
-    
-    emailService.Send(to, subject);
-    return NoValue.Instance;  // Success, but no data to return
-}
-
-// Use _ (discard) in lambdas when the value doesn't matter
-Result<NoValue> result = DoWork();
-result
-    .Tap(_ => Console.WriteLine("Work completed"))   // We don't need the NoValue
-    .Map(_ => "Operation successful");                // Transform to Result<string>
-```
-
-**Composing with Result<T>**
-
-The real power shows when chaining operations - `Result<NoValue>` works seamlessly with `Result<T>`:
+Deleting a record or sending an email either works or fails, but has nothing to return. Use
+`Result<NoValue>` for those.
 
 ```csharp
-Result<string> ProcessUser(int userId) =>
-    GetUser(userId)              // Result<User>
-        .Bind(ValidateUser)      // Result<NoValue> - validation doesn't return data
-        .Bind(_ => GetUser(userId))  // Back to Result<User>
-        .Map(user => user.Name); // Result<string>
-
-// Complex pipeline mixing valued and void results
-await GetUserEmail(userId)               // Result<string>
-    .BindAsync(email => SendWelcomeEmail(email))  // Result<NoValue>
-    .BindAsync(_ => LogEmailSent(userId))         // Result<NoValue>
-    .MapAsync(_ => "Welcome email sent");         // Result<string>
-```
-
----
-
-```csharp
-// Traditional approach
-public void DeleteUser(int userId)
-{
-    if (userId <= 0) throw new ArgumentException("Invalid ID");
-    if (!userExists(userId)) throw new UserNotFoundException();
-    database.Delete(userId); // Could throw SqlException
-}
-
-// With Result<NoValue>
 public Result<NoValue> DeleteUser(int userId)
 {
-    if (userId <= 0) 
+    if (userId <= 0)
         return Error.Validation("INVALID_ID", "User ID must be positive");
-    
+
     if (!UserExists(userId))
         return Error.NotFound("USER_NOT_FOUND", $"User {userId} does not exist");
-    
+
     database.Delete(userId);
     return NoValue.Instance;
 }
-
-// Explicit error handling
-Result<NoValue> deleteResult = DeleteUser(42);
-if (deleteResult.IsFailure)
-{
-    logger.LogError($"Delete failed: {deleteResult.Error.Message}");
-    return;
-}
-
-// Functional pipeline
-await ValidatePermissions(currentUser, targetUserId)
-    .BindAsync(_ => DeleteUser(targetUserId))
-    .TapAsync(_ => auditService.LogDeletion(targetUserId))
-    .MatchAsync(
-        _ => Ok("User deleted successfully"),
-        error => BadRequest(error.Message)
-    );
 ```
 
----
+It composes with valued results like anything else. Use `_` in lambdas where the `NoValue` does not
+matter:
+
+```csharp
+string outcome = await ValidatePermissionsAsync(currentUser, targetUserId)  // Task<Result<NoValue>>
+    .BindAsync(_ => DeleteUser(targetUserId))                              // Result<NoValue>
+    .TapAsync(_ => auditService.LogDeletion(targetUserId))
+    .MatchAsync(
+        _ => "User deleted",
+        error => $"Delete failed: {error.Message}");
+```
 
 ## Operations
 
-These operations enable functional composition, transformation, side effects, and recovery in a fluent, chainable style. 
-All operations support both synchronous and asynchronous variants, with automatic error propagation.
+Every operation has sync and async variants. They all short-circuit, except `TapAlways`: once a
+result is a failure, the rest of the chain is skipped and the error falls through to the end.
 
-### Bind - Monadic Chaining
+On naming, use `XAsync` when the callback is async. The chainable `Result<T>` operations also use
+`XAsync` when you chain off a `Task<Result<T>>`, so `await GetUserAsync(id).MapAsync(u => u.Name)`
+works with a plain sync lambda.
 
-**Purpose**: Chains operations that can fail, automatically propagating errors without manual checking.
+### Bind
 
-**When to use**: When you need to perform a sequence of operations where each step depends on the previous one's success, and any step might fail.
+Chains an operation that can itself fail.
 
 ```csharp
-// Synchronous chaining
 Result<string> ProcessUser(int userId) =>
-    GetUser(userId)                    // Result<User>
-        .Bind(ValidateUser)                    // Result<NoValue>
-        .Bind(_ => GetUser(userId))            // Result<User>
-        .Bind(FormatUserData);                 // Result<string>
+    GetUser(userId)             // Result<User>
+        .Bind(ValidateUser)     // Result<NoValue>
+        .Bind(_ => GetUser(userId))
+        .Bind(FormatUserData);  // Result<string>
 
-// Asynchronous chaining  
-async Task<Result<string>> ProcessUserAsync(int userId) =>
-    await GetUserAsync(userId)         // Task<Result<User>>
-        .BindAsync(ValidateUserAsync)          // Task<Result<User>>
-        .BindAsync(FormatUserDataAsync);       // Task<Result<string>>
-
-// Mixed sync/async
 await GetUserAsync(userId)
-    .BindAsync(user => ValidateUser(user))     // Sync validation
-    .BindAsync(user => SaveUserAsync(user));   // Back to async
+    .BindAsync(user => ApplyDefaults(user))   // sync callback
+    .BindAsync(user => SaveUserAsync(user));  // async callback
 ```
 
-**Key point**: Each operation in the chain receives the unwrapped value from the previous step. 
-If any step fails, the chain short-circuits and the error propagates to the final result.
+Each step gets the unwrapped value from the one before. The first failure ends the chain.
 
-### Map - Value Transformation
+### Map
 
-**Purpose**: Transforms the value inside a successful result without the possibility of failure.
-
-**When to use**: When you need to convert or transform data, but the transformation itself cannot fail (pure functions).
+Transforms the value with a function that cannot fail.
 
 ```csharp
-// Simple transformations
-Result<int> number = 42;
-Result<string> text = number.Map(x => x.ToString());
-Result<string> upper = text.Map(s => s.ToUpper());
-
-// Chaining transformations
 Result<UserDto> dto = GetUser(userId)
-    .Map(user => user.Name)                    // Extract name
-    .Map(name => name.Trim().ToUpper())        // Clean and format
-    .Map(name => new UserDto { Name = name }); // Create DTO
+    .Map(user => user.Name)
+    .Map(name => name.Trim().ToUpper())
+    .Map(name => new UserDto { Name = name });
 
-// Async transformations
 await GetUserAsync(userId)
-    .MapAsync(user => FormatNameAsync(user.Name))  // Async formatting
-    .MapAsync(name => CreateDtoAsync(name));       // Async DTO creation
-
-// Transform Result<NoValue> to valued Result
-Result<NoValue> workResult = DoWork();
-Result<string> message = workResult.Map(_ => "Work completed successfully");
+    .MapAsync(user => FormatNameAsync(user.Name));
 ```
 
-**Key point**: Map operations receive unwrapped values and return plain values (not Results). 
-Errors automatically propagate without executing the map operation.
+`Map` takes a plain value and returns a plain value. Use `Bind` when the function returns a
+`Result<T>`, otherwise you end up with `Result<Result<T>>`.
 
-### MapError - Error Translation
+### MapError
 
-**Purpose**: Transforms (relabels) the error of a failed result. The result stays a failure — `MapError` is for error *translation*, not recovery.
-
-**When to use**: When you want to map one error into another — re-coding an external error into your own code space, adding context, or re-categorising the `ErrorType`. To turn a failure back into a success, use [`Recover`](#recover---error-recovery) instead.
+Rewrites the error. The result stays a failure.
 
 ```csharp
-// Error transformation
 Result<Data> data = LoadData()
     .MapError(error => Error.Validation("LOAD_001", $"Failed to load: {error.Message}"));
 
-// Add context while preserving code/type/metadata
+// Add context but keep code, type and metadata
 Result<Order> order = PlaceOrder(request)
     .MapError(error => error.WithMessage("Checkout failed"));
-
-// Async translation (e.g. enrich from another service)
-Result<string> content = await DownloadContent()
-    .MapErrorAsync(async error => await ClassifyAsync(error));
 ```
 
-**Key point**: `MapError` only executes on failures and always stays a failure (`Error → Error`). Successful results pass through unchanged. It cannot convert a failure into a success — that's [`Recover`](#recover---error-recovery)'s job.
+Use it to re-code an external error into your own code space, re-categorise it, or add context. It
+cannot turn a failure into a success. That is [`Recover`](#recover).
 
-### Tap - Side Effects on Success
+### Tap
 
-**Purpose**: Executes side effects (logging, notifications, debugging) on successful results without modifying the result.
-
-**When to use**: When you need to perform actions like logging, caching, or notifications while maintaining the functional pipeline.
+Runs a side effect on success and returns the result untouched.
 
 ```csharp
-// Logging and debugging
 var result = GetUser(userId)
     .Tap(user => logger.LogInfo($"Retrieved user: {user.Name}"))
-    .Map(user => user.Email)
-    .Tap(email => Console.WriteLine($"Processing email: {email}"));
+    .Map(user => user.Email);
 
-// Caching successful results
-var data = await LoadExpensiveDataAsync()
-    .TapAsync(data => cache.SetAsync(cacheKey, data))
-    .MapAsync(data => TransformData(data));
-
-// Notifications and metrics
-await ProcessOrderAsync(order)
-    .TapAsync(async result => await notificationService.NotifySuccess(result))
-    .TapAsync(result => metrics.IncrementCounter("orders.processed"));
-
-// Multiple side effects
-GetUser(userId)
-    .Tap(user => auditService.LogAccess(user.Id))
-    .Tap(user => analytics.TrackUserActivity(user))
-    .Tap(user => cache.Warm(user.PreferredSettings));
+await LoadExpensiveDataAsync()
+    .TapAsync(data => cache.SetAsync(cacheKey, data));
 ```
 
-**Key point**: Tap actions receive the unwrapped value but don't affect the result. The original result passes through unchanged, making it perfect for pipeline instrumentation.
+### TapError
 
-### TapError - Side Effects on Failure
-
-**Purpose**: Executes side effects on failed results without modifying the result.
-
-**When to use**: When you need to log errors, send alerts, or perform cleanup operations while preserving the error for downstream handling.
+The same, on the failure branch. The error is preserved for whoever handles it downstream.
 
 ```csharp
-// Error logging and monitoring
 var result = GetUser(userId)
     .TapError(error => logger.LogError($"Failed to get user {userId}: {error.Message}"))
-    .TapError(error => metrics.IncrementCounter("user.fetch.errors"))
-    .TapError(error => alertService.SendAlert(error));
+    .TapError(error => metrics.IncrementCounter("user.fetch.errors"));
 
-// Async error handling
-await ProcessPaymentAsync(payment)
-    .TapErrorAsync(async error => await auditService.LogFailedPayment(payment, error))
-    .TapErrorAsync(async error => await notificationService.NotifyPaymentFailure(error));
-
-// Conditional error actions
 await UploadFileAsync(file)
-    .TapErrorAsync(async error => 
+    .TapErrorAsync(async error =>
     {
         if (error.Code == "QUOTA_EXCEEDED")
             await cleanupService.FreeSpace();
-        if (error.Code == "NETWORK_ERROR") 
-            await diagnosticsService.TestConnection();
     });
-
-// Debugging and development
-var pipeline = LoadData()
-    .TapError(error => Console.WriteLine($"Step 1 failed: {error}"))
-    .MapError(error => error.WithMessage("LoadData step"))
-    .TapError(error => Console.WriteLine($"After relabel: {error}"));
 ```
 
-**Key point**: TapError actions receive the error but don't modify the result. Failed results remain failed, successful results are untouched.
+### TapAlways
 
-### TapAlways - Side Effects on Both Branches
-
-**Purpose**: Executes a side effect on success *and* failure, then returns the original result unchanged.
-
-**When to use**: When the same work has to happen either way — stopping a timer, decrementing an in-flight gauge, emitting a "completed" metric tagged with the outcome. Chaining `.Tap(...).TapError(...)` covers the case where the two branches do *different* things; `TapAlways` exists for the case where they do the *same* thing, so the closure isn't duplicated and can't drift.
+Runs a side effect on both branches. Reach for it when the two branches do the *same* thing, so the
+closure is not duplicated across `Tap` and `TapError` and cannot drift.
 
 ```csharp
-// Shared work on both branches
 var stopwatch = Stopwatch.StartNew();
 
 var result = await ProcessOrderAsync(order)
@@ -446,62 +257,38 @@ var result = await ProcessOrderAsync(order)
     .TapAsync(o => logger.LogInfo($"Order {o.Id} placed in {stopwatch.Elapsed}"))
     .TapErrorAsync(e => logger.LogError($"Order failed after {stopwatch.Elapsed}: {e.Message}"));
 
-// Inspect the outcome in a single call
 await ChargeCardAsync(payment)
     .TapAlwaysAsync(r => metrics.IncrementCounter(
         "payments.attempted",
         tags: new() { ["outcome"] = r.IsSuccess ? "success" : "failure" }));
-
-// TapAlways runs at its position in the chain, not at the end of the pipeline,
-// so place it after the last step it is meant to measure
-using var scope = serviceProvider.CreateScope();
-
-var data = LoadData(scope)
-    .Map(Transform)
-    .TapAlways(_ => concurrencyGauge.Decrement());
 ```
 
-> [!NOTE]
-> Two things to know about the action:
->
-> - It receives the result **un-narrowed**. Check `IsSuccess`/`IsFailure` before reading `Value` or `Error` — each throws on the branch it does not belong to.
-> - It runs only once a `Result<T>` actually exists. If an earlier step **throws**, or an awaited task faults, the exception unwinds straight past `TapAlways` and the action never runs:
->
->   ```csharp
->   ThrowingStep()                // throws -- not a failed Result, an exception
->       .TapAlways(_ => cleanup()); // never reached
->   ```
->
->   Use `using` or a real `try`/`finally` around the pipeline for resource cleanup; reach for `TapAlways` for instrumentation — timers, counters, completion metrics.
+Two things to know:
 
-**Key point**: `TapAlways` returns the original result unchanged, so it composes anywhere in a chain. Exceptions thrown by the action propagate to the caller, exactly as with `Tap` and `TapError` — and on the failure branch that replaces a handled `Error` with a thrown exception, so keep the action non-throwing.
+- The action gets the whole `Result<T>`, not the value. Check `IsSuccess` or `IsFailure` before
+  reading `Value` or `Error`.
+- It runs at its position in the chain, and only once a result exists. If an earlier step throws,
+  the exception unwinds straight past it:
 
-### Match - Result Folding
+  ```csharp
+  ThrowingStep()                  // throws, so there is no Result
+      .TapAlways(_ => cleanup()); // never runs
+  ```
 
-**Purpose**: Converts a Result into a concrete value by providing handlers for both success and failure cases.
+  Use `using` or `try`/`finally` for resource cleanup. `TapAlways` is for instrumentation.
 
-**When to use**: When you need to extract a final value from a Result, typically at the end of a functional pipeline or when interfacing with non-Result code.
+### Match
+
+Collapses the result into a plain value. Both handlers must return the same type, and exactly one
+of them runs.
 
 ```csharp
-// Simple value extraction
 string message = GetUser(userId).Match(
     user => $"Welcome, {user.Name}!",
-    error => $"Error: {error.Message}"
-);
+    error => $"Error: {error.Message}");
 
-// HTTP response mapping
-return await ProcessRequestAsync(request).MatchAsync(
-    async data => Ok(await SerializeAsync(data)),
-    error => BadRequest(error.Message)
-);
-
-// Complex branching logic
-var actionResult = await ValidateAndProcessAsync(input).MatchAsync(
-    async result => 
-    {
-        await notificationService.NotifySuccess(result);
-        return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
-    },
+IActionResult response = ProcessRequest(request).Match<IActionResult>(
+    data => Ok(data),
     error => error.Type switch
     {
         ErrorType.Validation => BadRequest(error.Message),
@@ -509,762 +296,290 @@ var actionResult = await ValidateAndProcessAsync(input).MatchAsync(
         ErrorType.Unauthorized => Unauthorized(error.Message),
         ErrorType.Forbidden => Forbid(error.Message),
         _ => StatusCode(500, "Internal server error")
-    }
-);
-
-// Aggregating multiple results
-string summary = await Task.WhenAll(
-        ProcessDataAsync(data1),
-        ProcessDataAsync(data2), 
-        ProcessDataAsync(data3)
-    )
-    .ContinueWith(tasks => tasks.Result
-        .Select(result => result.Match(
-            success => $"✓ {success}",
-            error => $"✗ {error.Message}"
-        ))
-        .Aggregate((a, b) => $"{a}\n{b}")
-    );
-
-// Early termination patterns
-return users.Match(
-    userList => userList.Any() 
-        ? ProcessUsers(userList) 
-        : Result.Failure(Error.NotFound("NO_USERS", "No users to process")),
-    error => error
-);
+    });
 ```
 
-**Key point**: Match is terminal - it extracts the final value from the Result monad. 
-Both success and failure handlers must return the same type, and one of them will always execute.
+The explicit `<IActionResult>` is needed whenever the two handlers return different concrete types.
+Without it there is nothing for the compiler to infer `U` from.
 
-### Operation Composition Examples
+### Try
 
-```csharp
-// Complete pipeline combining all operations
-async Task<IActionResult> UpdateUserProfileAsync(int userId, UpdateProfileRequest request)
-{
-    return await GetUserAsync(userId)
-        .TapAsync(user => logger.LogInfo($"Updating profile for user {user.Id}"))
-        .BindAsync(user => ValidateUpdateRequestAsync(request, user))
-        .TapAsync(validatedData => auditService.LogValidation(validatedData))
-        .BindAsync(data => UpdateUserInDatabaseAsync(data))
-        .TapAsync(updatedUser => cache.InvalidateUser(updatedUser.Id))
-        .TapErrorAsync(error => logger.LogError($"Profile update failed: {error.Message}"))
-        .MatchAsync(
-            user => Ok(new { message = "Profile updated successfully", user = user.ToDto() }),
-            error => error.Type switch
-            {
-                ErrorType.NotFound => NotFound(error.Message),
-                ErrorType.Validation => BadRequest(error.Message),
-                ErrorType.Unauthorized => Unauthorized(error.Message),
-                ErrorType.Forbidden => Forbid(error.Message),
-                _ => StatusCode(500, "Internal server error")
-            }
-        );
-}
-
-// Error handling with fallbacks
-Result<Configuration> config = LoadPrimaryConfig()
-    .TapError(error => logger.LogWarning($"Primary config failed: {error.Message}"))
-    .Recover(_ => LoadBackupConfig())
-    .TapError(error => logger.LogWarning($"Backup config failed: {error.Message}"))
-    .Recover(_ => LoadDefaultConfig())
-    .TapError(error => logger.LogError($"All config sources failed: {error.Message}"));
-```
-
-### Try - Exception Handling
-
-**Purpose**: Wraps exception-throwing operations into Results, bridging the gap between traditional .NET APIs and the Result pattern.
-
-**When to use**: When you need to call code that throws exceptions (parsing, file I/O, database calls, third-party APIs) and want to handle errors functionally.
+Wraps code that throws, so third-party and BCL APIs can join a pipeline.
 
 ```csharp
-// Basic exception catching
-Result<int> numberResult = Result<string>.Success("42")
-    .Try(x => int.Parse(x));  // Catches FormatException
+Result<int> parsed = Result<string>.Success("  123  ")
+    .Map(s => s.Trim())
+    .Try(s => int.Parse(s))   // FormatException becomes an Error
+    .Map(x => x * 2);
 
-// With custom error mapping
-Result<User> userResult = Result<string>.Success(jsonString)
+Result<User> user = Result<string>.Success(json)
     .Try(
         json => JsonSerializer.Deserialize<User>(json),
-        ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}")
-    );
-
-// Opt-in stack traces (NOT included by default — see security note below)
-Result<int> withStackTrace = Result<string>.Success("not a number")
-    .Try(
-        x => int.Parse(x),
-        ex => Error.Unexpected("EXCEPTION", ex.Message)
-            .WithMetadata("ExceptionType", ex.GetType().Name)
-            .WithMetadata("StackTrace", ex.StackTrace ?? string.Empty)
-    );
-
-// Chaining with other operations
-Result<int> processedResult = Result<string>.Success("  123  ")
-    .Map(s => s.Trim())
-    .Try(s => int.Parse(s))                    // Can throw
-    .Map(x => x * 2);                          // Only runs if parsing succeeded
-
-// Async operations
-Result<string> fileContent = await Result<string>.Success("data.txt")
-    .TryAsync(async path => await File.ReadAllTextAsync(path));
-
-// Real-world pipeline
-var result = await GetConfigPathAsync()              // Result<string>
-    .TryAsync(async path => await File.ReadAllTextAsync(path))  // Result<string>
-    .Try(json => JsonSerializer.Deserialize<Config>(json))      // Result<Config>
-    .Tap(config => logger.LogInfo($"Loaded config from {config.Source}"))
-    .MapAsync(async config => await ValidateConfigAsync(config));
+        ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}"));
 ```
 
-**Key points**:
+- The default mapping produces `Error.Unexpected("EXCEPTION", ex.Message)` with `ExceptionType` in
+  the metadata. **Stack traces are left out on purpose.** They leak file paths, line numbers and
+  the internal call hierarchy, which is a CWE-209 disclosure risk once an error crosses a trust
+  boundary. Add them yourself through the `errorMapper` overload if you need them for an internal
+  log:
 
-- The default `Try` converts caught exceptions to `Error.Unexpected("EXCEPTION", ex.Message)` with `ExceptionType` in the metadata. **Stack traces are deliberately not included** — they leak file paths, line numbers, and the internal call hierarchy, which is a CWE-209 information-disclosure risk if errors cross a trust boundary (API responses, untrusted log sinks, third-party integrations). If you need the stack trace (e.g. for an internal log), use the `errorMapper` overload as shown above.
-- `OperationCanceledException` and `TaskCanceledException` are **not** caught — cancellation propagates so cooperative cancellation keeps working. Wrap the whole pipeline in your own `try/catch` if you need to convert cancellation into a Result.
-- Success values pass through unchanged; existing errors propagate without executing the operation.
+  ```csharp
+  .Try(x => int.Parse(x), ex => Error.Unexpected("EXCEPTION", ex.Message)
+      .WithMetadata("StackTrace", ex.StackTrace ?? string.Empty))
+  ```
 
-### Ensure - Validation Guards
+- `OperationCanceledException` and `TaskCanceledException` are not caught, so cooperative
+  cancellation keeps working. Wrap the pipeline in your own `try`/`catch` if you want cancellation
+  as a Result.
+- If your `errorMapper` returns `default(Error)`, the default mapping is used instead. `Try` never
+  throws.
 
-**Purpose**: Converts successful results to failures based on validation predicates, making validation chains declarative and composable.
+### Ensure
 
-**When to use**: When you need to validate data, enforce business rules, or guard against invalid states while maintaining functional composition.
+Turns a success into a failure when a predicate rejects the value.
 
 ```csharp
-// Simple validation
-Result<int> age = GetAge()
-    .Ensure(age => age >= 0, Error.Validation("NEGATIVE_AGE", "Age cannot be negative"))
-    .Ensure(age => age <= 150, Error.Validation("INVALID_AGE", "Age unrealistic"));
-
-// With error factory for dynamic messages
-Result<User> user = GetUser(userId)
-    .Ensure(u => u.Age >= 18, u => Error.Validation("UNDERAGE", $"User {u.Name} is only {u.Age} years old"))
-    .Ensure(u => u.IsActive, Error.Forbidden("INACTIVE", "User account is not active"));
-
-// Chaining validations with transformations
 Result<Order> order = GetOrder(orderId)
     .Ensure(o => o.Items.Any(), Error.Validation("EMPTY_ORDER", "Order must contain at least one item"))
-    .Ensure(o => o.Total > 0, Error.Validation("INVALID_TOTAL", "Order total must be positive"))
-    .Map(o => o.WithTax())
-    .Ensure(o => o.Total <= 10000, Error.Validation("EXCEEDS_LIMIT", "Order exceeds maximum amount"));
+    .Ensure(o => o.Total > 0, Error.Validation("INVALID_TOTAL", "Order total must be positive"));
 
-// Async validation
-Result<Order> validatedOrder = await GetOrder(orderId)
+// The error factory overload sees the value, for messages that need context
+Result<User> user = GetUser(userId)
+    .Ensure(u => u.Age >= 18, u => Error.Validation("UNDERAGE", $"{u.Name} is only {u.Age}"));
+
+Result<Order> stocked = await GetOrder(orderId)
     .EnsureAsync(
         async o => await inventoryService.HasStock(o.Items),
-        Error.Conflict("OUT_OF_STOCK", "Insufficient inventory for order")
-    )
-    .EnsureAsync(
-        async o => await fraudService.IsLegitimate(o),
-        Error.Forbidden("FRAUD_DETECTED", "Order flagged as suspicious")
-    );
-
-// Complex validation pipeline
-Result<string> processedData = Result<string>.Success("  42  ")
-    .Map(s => s.Trim())
-    .Try(s => int.Parse(s))
-    .Ensure(x => x > 0, Error.Validation("NEGATIVE", "Value must be positive"))
-    .Ensure(x => x < 100, Error.Validation("TOO_LARGE", "Value must be less than 100"))
-    .Map(x => x * 2)
-    .Match(
-        success => $"Result: {success}",
-        error => $"Error: {error.Message}"
-    );
-
-// Multiple guards with different error types
-Result<Transaction> transaction = CreateTransaction(data)
-    .Ensure(t => t.Amount > 0, Error.Validation("INVALID_AMOUNT", "Amount must be positive"))
-    .Ensure(t => t.AccountId != null, Error.Validation("MISSING_ACCOUNT", "Account ID required"))
-    .Ensure(t => HasSufficientFunds(t), Error.Conflict("INSUFFICIENT_FUNDS", "Account balance too low"))
-    .Ensure(t => IsWithinDailyLimit(t), Error.Conflict("LIMIT_EXCEEDED", "Daily transaction limit reached"));
+        Error.Conflict("OUT_OF_STOCK", "Insufficient inventory for order"));
 ```
 
-**Key point**: Ensure short-circuits on the first failing predicate and only executes on successful results. Failed results propagate their error without executing any predicates. The error factory variant receives the value for context-aware error messages.
+It stops at the first predicate that fails.
 
-### Recover - Error Recovery
+### Recover
 
-**Purpose**: Converts specific failed results back to success by providing recovery logic based on error type or custom predicates, enabling graceful fallbacks and retry scenarios.
-
-**When to use**: When you want to handle specific error types with fallback values or recovery logic, retry failed operations, or provide default values for expected failures.
+Turns a failure back into a success.
 
 ```csharp
-// Unconditional recovery — handle any failure
+// Any failure
 Result<Config> config = LoadConfig()
-    .Recover(error => LoadDefaultConfig());  // any error → fall back
+    .Recover(error => LoadDefaultConfig());
 
-// Basic recovery with fallback value
+// A single error type, with a fallback value
 Result<User> user = GetUser(userId)
-    .Recover(ErrorType.NotFound, User.Guest);  // Use guest user if not found
+    .Recover(ErrorType.NotFound, User.Guest);
 
-// Recovery based on error type with logic
-Result<Config> config = LoadConfig()
-    .Recover(ErrorType.NotFound, error => LoadDefaultConfig())
-    .Recover(ErrorType.Unavailable, error => LoadCachedConfig());
-
-// Recovery with custom predicate
-Result<string> content = DownloadContent(url)
-    .Recover(
-        error => error.Code == "TIMEOUT" || error.Code == "NETWORK_ERROR",
-        error => RetryDownload(url, maxRetries: 3)
-    );
-
-// Async recovery
-Result<Data> data = await FetchPrimaryDataAsync()
-    .RecoverAsync(
-        ErrorType.Unavailable,
-        async error => await FetchBackupDataAsync()
-    );
-
-// Multiple recovery strategies
-Result<WeatherData> weather = GetWeatherFromPrimaryApi()
-    .Recover(ErrorType.Timeout, _ => GetWeatherFromSecondaryApi())
-    .Recover(ErrorType.Unavailable, _ => GetCachedWeather())
-    .Recover(ErrorType.NotFound, WeatherData.Default);
-
-// Handle several error types with one handler
+// Several error types, one handler
 Result<Data> data = await FetchDataAsync()
     .RecoverAsync(
-        [ErrorType.Timeout, ErrorType.Unavailable, ErrorType.Conflict],
-        async error => await FetchFromBackupAsync()
-    );
+        [ErrorType.Timeout, ErrorType.Unavailable],
+        async error => await FetchFromBackupAsync());
 
-// Same with a fallback value
-Result<User> user = GetUser(userId)
-    .Recover([ErrorType.NotFound, ErrorType.Unauthorized], User.Guest);
-
-// Recovery in pipeline
-Result<Order> order = await ValidateOrderAsync(orderId)
-    .BindAsync(o => ProcessPaymentAsync(o))
-    .RecoverAsync(
-        ErrorType.Unavailable,
-        async error => await RetryPaymentWithBackupProviderAsync(orderId)
-    )
-    .TapAsync(o => logger.LogInfo($"Order {o.Id} completed"))
-    .TapErrorAsync(error => logger.LogError($"Order processing failed: {error.Message}"));
-
-// Conditional recovery based on error metadata
+// A custom predicate
 Result<Response> response = await SendRequestAsync(request)
     .RecoverAsync(
-        error => error.Type == ErrorType.Timeout && 
-                 error.GetMetadata<int>("AttemptNumber") < 3,
-        async error => 
-        {
-            var attempts = error.GetMetadata<int>("AttemptNumber") ?? 0;
-            return await RetryRequestAsync(request, attempts + 1);
-        }
-    );
+        error => error.Type == ErrorType.Timeout && error.GetMetadata<int>("AttemptNumber") < 3,
+        async error => await RetryRequestAsync(request));
 
-// Graceful degradation with multiple fallbacks
+// Layered fallbacks
 Result<ImageData> image = LoadHighResImage(imageId)
-    .TapError(error => logger.LogWarning($"High-res failed: {error.Message}"))
     .Recover(ErrorType.NotFound, _ => LoadMediumResImage(imageId))
-    .TapError(error => logger.LogWarning($"Medium-res failed: {error.Message}"))
     .Recover(ErrorType.NotFound, _ => LoadThumbnail(imageId))
-    .TapError(error => logger.LogWarning($"Thumbnail failed: {error.Message}"))
     .Recover(ErrorType.NotFound, ImageData.Placeholder);
 ```
 
-**Key point**: Recover only executes when the result is a failure (and, for the conditional overloads, when the condition matches). Success results pass through unchanged. The condition can be omitted (recover from *any* failure), a single `ErrorType`, a set of `ErrorType`s (`IEnumerable<ErrorType>`), or a custom `Func<Error, bool>` predicate. The recovery itself can either return a successful value or another `Result<T>` (which may itself be a failure — useful for "try fallback, but it might also fail" patterns).
+The condition can be omitted, a single `ErrorType`, an `IEnumerable<ErrorType>`, or a
+`Func<Error, bool>`. The recovery itself may return another failure, which is what makes layered
+fallbacks work.
 
-**Recover vs MapError**:
-- **MapError**: error *translation* only (`Error → Error`). The result always stays a failure — use it to re-code, re-categorise, or add context to an error. It cannot turn a failure into a success.
-- **Recover**: failure → maybe-success. Use it to handle failures (unconditionally, or filtered by single type, multi-type, or predicate) and get back to a successful value. To recover while *changing* the value type, transform the success rail first with `Map`/`Bind`, then `Recover`.
+**Recover or MapError?** `MapError` relabels an error and stays a failure. `Recover` handles the
+failure and can get back to a value. Neither changes the value type: to recover into a different
+`T`, transform the success side with `Map` or `Bind` first.
 
-### Sequence - Collection Aggregation
+### Sequence
 
-**Purpose**: Aggregates a collection of Results into a single Result containing all values, short-circuiting on the first failure.
-
-**When to use**: When you have a collection of Results and need all operations to succeed (all-or-nothing semantics). Perfect for validation scenarios where you need all checks to pass.
+Aggregates `IEnumerable<Result<T>>` into `Result<IReadOnlyList<T>>`. All or nothing.
 
 ```csharp
-// Basic sequence - all values or first error
-IEnumerable<Result<int>> validations = new[]
+Result<IReadOnlyList<int>> allValid = new[]
 {
     ValidateAge(user.Age),
     ValidateEmail(user.Email),
     ValidatePhone(user.Phone)
-};
+}.Sequence();
 
-Result<IReadOnlyList<int>> allValid = validations.Sequence();
-// Returns: Success with [age, email, phone] if all succeed
-//          OR first validation error
-
-// Sequence with LINQ
-var userIds = new[] { 1, 2, 3, 4, 5 };
-Result<IReadOnlyList<User>> users = userIds
-    .Select(id => GetUser(id))
-    .ToList()
-    .Sequence();
-
-// Async sequence
-IEnumerable<Task<Result<Data>>> asyncTasks = urls.Select(url => FetchDataAsync(url));
-Result<IReadOnlyList<Data>> allData = await asyncTasks.SequenceAsync();
-
-// Validation pipeline
-var validationResults = new[]
-{
-    Validate.NotEmpty(name, "NAME_REQUIRED"),
-    Validate.MinLength(name, 3, "NAME_TOO_SHORT"),
-    Validate.MaxLength(name, 50, "NAME_TOO_LONG")
-};
-
-Result<IReadOnlyList<NoValue>> validated = validationResults.Sequence();
-// If any validation fails, returns that error
-// If all pass, returns success with list of NoValue
-
-// Multi-step operations
-var operations = new[]
-{
-    SaveToDatabase(data),
-    UpdateCache(data),
-    NotifySubscribers(data)
-};
-
-Result<IReadOnlyList<NoValue>> completed = operations.Sequence();
-// All operations must succeed
+Result<IReadOnlyList<Data>> allData = await urls
+    .Select(url => FetchDataAsync(url))
+    .SequenceAsync();
 ```
 
-**Key point**: Sequence short-circuits on the first failure and returns that error immediately. If you need to process all items and collect both successes and failures, use [Partition](#partition---separate-successes-from-failures) instead.
+It stops at the first failure and returns that error. Use [`Partition`](#partition) if you need
+every item processed.
 
-### Traverse - Transform and Collect
+### Traverse
 
-**Purpose**: Transforms each element in a collection using a Result-producing function and aggregates the results, short-circuiting on the first failure.
-
-**When to use**: When you need to apply a transformation that might fail to each item in a collection and collect all results (all-or-nothing semantics).
+`Select` and `Sequence` in one step: apply a function that returns a `Result<U>` to each element and
+collect the values.
 
 ```csharp
-// Basic traverse - transform and collect
-var userIds = new[] { 1, 2, 3, 4, 5 };
 Result<IReadOnlyList<User>> users = Result.Traverse(userIds, id => GetUser(id));
-// Transforms each ID to User, stops on first failure
 
-// Parse and validate
-var inputs = new[] { "42", "100", "256" };
-Result<IReadOnlyList<int>> parsed = Result.Traverse(inputs, s =>
-{
-    if (int.TryParse(s, out var n))
-        return Result<int>.Success(n);
-    return Error.Validation("PARSE_ERROR", $"Invalid number: {s}");
-});
+Result<IReadOnlyList<Email>> emails = Result.Traverse(addresses, Email.TryCreate);
 
-// Async traverse
-var productIds = new[] { 1, 2, 3 };
 Result<IReadOnlyList<Product>> products = await Result
     .TraverseAsync(productIds, id => FetchProductAsync(id));
-
-// Chained transformations
-var orderIds = new[] { 101, 102, 103 };
-Result<IReadOnlyList<OrderSummary>> summaries = Result.Traverse(orderIds, id => GetOrder(id))
-    .Bind(orders => Result.Traverse(orders, order => order.ValidateAndProcess()))
-    .Map(processed => processed.Select(o => o.ToSummary()).ToList());
-
-// File processing
-var filePaths = new[] { "data1.json", "data2.json", "data3.json" };
-Result<IReadOnlyList<Config>> configs = Result
-    .Traverse(filePaths, path => LoadConfigFromFile(path));
-
-// Database batch insert
-var entities = new[] { entity1, entity2, entity3 };
-Result<IReadOnlyList<int>> insertedIds = await Result
-    .TraverseAsync(entities, e => InsertIntoDatabase(e));
-// Stops on first database error
-
-// Validation with transformation
-var emailAddresses = new[] { "user1@example.com", "user2@example.com", "invalid" };
-Result<IReadOnlyList<Email>> validEmails = Result.Traverse(emailAddresses, email =>
-    Email.TryCreate(email) // Returns Result<Email>
-);
-
-// Nested traverse
-var userGroups = new[] { groupA, groupB, groupC };
-Result<IReadOnlyList<IReadOnlyList<User>>> groupUsers = Result.Traverse(
-    userGroups, 
-    group => Result.Traverse(group.MemberIds, id => GetUser(id))
-);
 ```
 
-**Key point**: Traverse is like LINQ's `Select` but for Result-producing functions. It short-circuits on the first failure. Think of it as "map and sequence combined" - it applies a function to each element and aggregates the results.
+Also stops at the first failure. Use `Sequence` when you already hold results, `Traverse` when you
+hold the inputs.
 
-**Traverse vs Sequence**:
-- **Sequence**: You already have `IEnumerable<Result<T>>`, just aggregate them
-- **Traverse**: You have `IEnumerable<T>` and need to apply a Result-producing function `T → Result<U>`, then aggregate
+### Partition
 
-### Partition - Separate Successes from Failures
-
-**Purpose**: Processes all Results in a collection and separates successes from failures (does NOT short-circuit). Returns both collections for separate handling.
-
-**When to use**: When you want to process all items and handle successes and failures separately (best-effort semantics). Perfect for bulk operations, batch imports, and reporting scenarios.
+Processes everything and hands back both sides.
 
 ```csharp
-// Basic partition - separate successes from failures
-IEnumerable<Result<User>> results = userIds.Select(id => ImportUser(id));
-var (imported, failed) = results.Partition();
+var (imported, failed) = userIds.Select(id => ImportUser(id)).Partition();
 
-Console.WriteLine($"Successfully imported: {imported.Count}");
-Console.WriteLine($"Failed to import: {failed.Count}");
+Console.WriteLine($"Imported {imported.Count}, failed {failed.Count}");
 
-// Process successes and failures separately
 foreach (var user in imported)
-{
     await SendWelcomeEmail(user);
-}
 
 foreach (var error in failed)
-{
     logger.LogError($"Import failed: {error.Code} - {error.Message}");
-}
-
-// Bulk validation with reporting
-var users = GetAllUsers();
-var validationResults = users.Select(user => ValidateUser(user));
-var (valid, invalid) = validationResults.Partition();
-
-return new ValidationReport
-{
-    ValidCount = valid.Count,
-    InvalidCount = invalid.Count,
-    Errors = invalid.Select(e => new ErrorReport
-    {
-        Code = e.Code,
-        Message = e.Message,
-        Timestamp = DateTime.UtcNow
-    }).ToList()
-};
-
-// Batch processing with partial success
-var orders = GetPendingOrders();
-var processResults = orders.Select(order => ProcessOrder(order));
-var (succeeded, failedOrders) = processResults.Partition();
-
-// Continue with successful orders
-await NotifyCustomers(succeeded);
-await UpdateInventory(succeeded);
-
-// Retry or log failed orders
-foreach (var error in failedOrders)
-{
-    await QueueForRetry(error);
-}
-
-// File processing with error collection
-var files = Directory.GetFiles("./imports");
-var parseResults = files.Select(f => ParseFile(f));
-var (parsed, parseErrors) = parseResults.Partition();
-
-// Process successful parses
-SaveToDatabase(parsed);
-
-// Generate error report for failed parses
-var errorReport = parseErrors.Select(err => new {
-    File = err.GetMetadata<string>("FileName"),
-    Error = err.Message
-});
-
-// Email send with reporting
-var recipients = GetSubscribers();
-var sendResults = recipients.Select(r => SendEmail(r));
-var (sent, failed) = sendResults.Partition();
-
-return new EmailCampaignResult
-{
-    TotalSent = sent.Count,
-    TotalFailed = failed.Count,
-    FailureDetails = failed.Select(e => new FailureDetail
-    {
-        Recipient = e.GetMetadata<string>("Recipient"),
-        Reason = e.Message
-    })
-};
-
-// Data migration with reporting
-var records = await GetLegacyRecords();
-var migrationResults = records.Select(r => MigrateRecord(r));
-var (migrated, migrationFailed) = migrationResults.Partition();
-
-Console.WriteLine($"Migration complete:");
-Console.WriteLine($"  ✓ Migrated: {migrated.Count}");
-Console.WriteLine($"  ✗ Failed: {migrationFailed.Count}");
 ```
 
-**Key point**: Unlike Sequence and Traverse which short-circuit on the first error (all-or-nothing), Partition processes the entire collection and separates successes from failures (best-effort). Use Partition when you want to handle partial success scenarios.
+Returns `(IReadOnlyList<T> Successes, IReadOnlyList<Error> Failures)`. Unlike `Sequence` and
+`Traverse` it never short-circuits, so use it for bulk imports, batch jobs, and anywhere partial
+success is a real outcome.
 
-**Partition vs Sequence/Traverse**:
-- **Sequence/Traverse**: Short-circuit on first error ("all or nothing") - returns `Result<IEnumerable<T>>`
-- **Partition**: Process everything ("best effort") - returns `(IReadOnlyList<T> Successes, IReadOnlyList<Error> Failures)`
+### Combine
 
-### Combine - Combine Multiple Independent Results
-
-**Purpose**: Combines 2-8 independent Results into a single Result, applying an optional selector function. Short-circuits on the first failure. Ideal for parallel independent operations.
-
-**When to use**: When you have multiple independent Results (e.g., from parallel async operations) and need all to succeed. Use Combine for static, declarative combination of multiple results.
+Combines 2 to 8 independent results, with or without a selector.
 
 ```csharp
-// Basic combine - 2 parameters
-var user = GetUser(userId);
-var settings = GetSettings(userId);
-var combined = Result.Combine(user, settings);
-// Returns: Result<(User, Settings)>
+// Without a selector you get a tuple
+Result<(User, Settings)> combined = Result.Combine(GetUser(userId), GetSettings(userId));
 
-// With selector - transform immediately
-var result = Result.Combine(
-    user,
-    settings,
-    (u, s) => new Profile { User = u, Settings = s }
-);
-
-// Combining 3+ results
-var dashboard = Result.Combine(
+// With one, the values go straight into it
+Result<Dashboard> dashboard = Result.Combine(
     GetUser(userId),
     GetSettings(userId),
     GetPermissions(userId),
-    (u, s, p) => new Dashboard(u, s, p)
-);
+    (u, s, p) => new Dashboard(u, s, p));
 
-// Parallel async operations
+// Parallel work: start the tasks first, then combine
 var userTask = GetUserAsync(userId);
 var settingsTask = GetSettingsAsync(userId);
-var permissionsTask = GetPermissionsAsync(userId);
+await Task.WhenAll(userTask, settingsTask);
 
-await Task.WhenAll(userTask, settingsTask, permissionsTask);
+var profile = Result.Combine(await userTask, await settingsTask, (u, s) => new Profile(u, s));
 
-var result = Result.Combine(
-    await userTask,
-    await settingsTask,
-    await permissionsTask,
-    (u, s, p) => new Dashboard(u, s, p)
-);
-
-// Validation scenario - all must pass
-var validation = Result.Combine(
-    ValidateName(name),
-    ValidateEmail(email),
-    ValidateAge(age),
-    ValidatePhone(phone),
-    (n, e, a, p) => new UserRegistration(n, e, a, p)
-);
-
-// Form validation with 6+ fields
-var form = Result.Combine(
-    ValidateField1(data.Field1),
-    ValidateField2(data.Field2),
-    ValidateField3(data.Field3),
-    ValidateField4(data.Field4),
-    ValidateField5(data.Field5),
-    ValidateField6(data.Field6),
-    (f1, f2, f3, f4, f5, f6) => new FormData(f1, f2, f3, f4, f5, f6)
-);
-
-// Without selector - returns tuple
-var tuple = Result.Combine(
-    GetFirstName(),
-    GetLastName(),
-    GetAge()
-);
-// Returns: Result<(string, string, int)>
-if (tuple.IsSuccess)
-{
-    var (firstName, lastName, age) = tuple.Value;
-}
-
-// Combining different types
-var report = Result.Combine(
-    FetchSalesData(),      // Result<SalesData>
-    FetchInventoryData(),  // Result<InventoryData>
-    FetchCustomerData(),   // Result<CustomerData>
-    CalculateMetrics(),    // Result<Metrics>
-    (sales, inventory, customers, metrics) => new MonthlyReport
-    {
-        Sales = sales,
-        Inventory = inventory,
-        Customers = customers,
-        Metrics = metrics
-    }
-);
-
-// CombineAsync - with async selector
-var enriched = await Result.CombineAsync(
-    GetUser(userId),
-    GetSettings(userId),
-    async (u, s) =>
-    {
-        await LogAccess(u.Id);
-        return new Profile { User = u, Settings = s };
-    }
-);
-
-// CombineAsync - processing multiple results asynchronously
+// CombineAsync takes an async selector
 var report = await Result.CombineAsync(
     FetchSalesData(),
     FetchInventoryData(),
-    FetchCustomerData(),
-    async (sales, inventory, customers) =>
-    {
-        // Perform async aggregation/processing
-        var metrics = await CalculateMetricsAsync(sales, inventory, customers);
-        return new Report(sales, inventory, customers, metrics);
-    }
-);
+    async (sales, inventory) => await BuildReportAsync(sales, inventory));
 ```
 
-**Key point**: Combine is static and declarative - pass all Results at once. It short-circuits on the first failure, returning that error immediately. Supports 2-8 parameters with optional selector functions. Use `CombineAsync` when your selector function is async.
+The arguments are evaluated at the call site, so every result is computed before `Combine` sees
+them. It returns the first error it finds and drops the rest.
 
-### Zip - Fluent Result Combination
+### Zip
 
-**Purpose**: Fluently combines two Results in a method chain. A fluent wrapper around `Combine` for 2 parameters, enabling sequential chaining patterns.
-
-**When to use**: When you want to build up a result by chaining combinations fluently, or when one result depends on the previous. Use Zip for fluent, sequential composition.
+`Combine` for two results, in fluent form.
 
 ```csharp
-// Basic zip - fluent chaining
-var result = GetUser(userId)
+var profile = GetUser(userId)
     .Zip(GetSettings(userId), (user, settings) => new Profile(user, settings));
 
-// Multiple chained zips
+// Chain to build up progressively
 var dashboard = GetUser(userId)
     .Zip(GetSettings(userId), (u, s) => (User: u, Settings: s))
     .Zip(GetPermissions(userId), (us, p) => new Dashboard(us.User, us.Settings, p));
 
-// Async chaining
-var result = await GetUserAsync(userId)
-    .Zip(await GetSettingsAsync(userId), (u, s) => new Profile(u, s));
+// Without a selector you get a tuple
+Result<(string, string)> name = GetFirstName().Zip(GetLastName());
 
-// ZipAsync with async selector
 var result = await GetUserAsync(userId)
     .ZipAsync(GetSettingsAsync(userId), async (u, s) =>
     {
         await LogProfileCreation(u.Id);
         return new Profile(u, s);
     });
-
-// Building complex objects fluently
-var order = GetProduct(productId)
-    .Zip(GetPrice(productId), (product, price) => (product, price))
-    .Zip(GetInventory(productId), (pp, inventory) => (pp.product, pp.price, inventory))
-    .Zip(GetShipping(shippingId), (ppi, shipping) => new Order
-    {
-        Product = ppi.product,
-        Price = ppi.price,
-        Available = ppi.inventory > 0,
-        Shipping = shipping
-    });
-
-// Without selector - returns tuple
-var tuple = GetFirstName()
-    .Zip(GetLastName());
-// Returns: Result<(string, string)>
-
-// Mixing sync and async
-var result = await GetUserAsync(userId)
-    .Zip(GetSettings(userId), (u, s) => new Profile(u, s));
-
-// Task extension - both are tasks
-var result = await GetUserAsync(userId)
-    .Zip(GetSettingsAsync(userId), (u, s) => new Profile(u, s));
-
-// Progressive building in pipeline
-var result = ValidateInput(data)
-    .Map(validated => Transform(validated))
-    .Zip(GetConfiguration(), (transformed, config) => Apply(transformed, config))
-    .Bind(SaveToDatabase);
-
-// Combining with other operations
-var profile = GetUser(userId)
-    .Tap(user => logger.LogInfo($"Retrieved user: {user.Name}"))
-    .Zip(GetSettings(userId), (u, s) => new Profile(u, s))
-    .TapError(error => logger.LogError($"Failed to create profile: {error.Message}"));
 ```
 
-**Key point**: Zip is fluent and sequential - chain `.Zip()` calls for readability. Perfect for building complex objects step-by-step. All async variants included for seamless async/await integration.
+Use `Zip` to chain, `Result.Combine` when you have three or more to combine at once.
 
-**Combine vs Zip**:
-- **Combine**: Static method for 2-8 parameters - `Result.Combine(r1, r2, r3, ...)`
-- **Zip**: Fluent extension for 2 parameters - `r1.Zip(r2, ...)` 
-- **Use Combine** when you have 3+ results to combine at once
-- **Use Zip** when you want to chain combinations fluently or build progressively
+## Error
 
----
+A readonly record struct with four members:
 
-## Error Type
+| Member | Description |
+| --- | --- |
+| `ErrorType Type` | The category. Drives `Recover`'s error-type overloads. |
+| `string Code` | Your code for the failure, such as an HTTP status or a localization key. |
+| `string Message` | The description. |
+| `IReadOnlyDictionary<string, object>? Metadata` | Optional context, or `null`. |
 
-The `Error` struct encapsulates failure information with rich metadata and a variety of factory and extension methods.
-
-### Properties
-
-- `ErrorType Type` – Category of the error (e.g., `Failure`, `Unexpected`, `Validation`, etc.).
-- `string Code` – Error code that can be used to decipher it (e.g. HTTP status codes or localization key).
-- `string Message` – Error description.
-- `IReadOnlyDictionary<string, object>? Metadata` – Optional contextual data. Read-only by design; use `WithMetadata(...)` to produce a new error with added/updated entries rather than mutating in place.
-
-### Equality
-
-`Error` uses the default record-struct equality. `Type`, `Code`, and `Message` are compared by value; `Metadata` is compared by reference (the underlying dictionary type does not provide structural equality). Two errors built independently with no metadata are equal; two errors that both carry metadata will only be equal if they share the same underlying `Metadata` reference. For identity-style comparisons, prefer `Type`, `Code`, and `Message` directly.
-
-### Metadata Accessors
-
-- `T? GetMetadata<T>(string key)` – Retrieves the metadata value for `key`, or `default` if absent (throws `InvalidCastException` if type mismatch).
-- `T? GetMetadata<T>()` – Returns the first metadata value matching type `T`, or `default` if none.
-
-### Factory Methods
-
-Use the static factory methods to create standard error instances:
+### Factories
 
 ```csharp
-var failure    = Error.Failure("E001", "General failure");
-var unexpected = Error.Unexpected("E100", "Something went wrong");
-var validation = Error.Validation("E102", "Invalid input");
-var notFound   = Error.NotFound("E404", "Item not found");
-var conflict   = Error.Conflict("E409", "Conflict detected");
+var failure      = Error.Failure("E001", "General failure");
+var unexpected   = Error.Unexpected("E100", "Something went wrong");
+var validation   = Error.Validation("E102", "Invalid input");
+var notFound     = Error.NotFound("E404", "Item not found");
+var conflict     = Error.Conflict("E409", "Conflict detected");
 var unauthorized = Error.Unauthorized("E401", "Not authenticated");
 var forbidden    = Error.Forbidden("E403", "Insufficient permission");
 var unavailable  = Error.Unavailable("E503", "Service unavailable");
 var timeout      = Error.Timeout("E408", "Operation timed out");
 
-// Custom error with specific type
+// Any type, when none of the above fit the name you want
 var custom = Error.Create(ErrorType.Validation, "E123", "Custom validation error");
 ```
 
-#### Unauthorized vs. Forbidden
+#### Unauthorized or Forbidden?
 
-These two are easy to conflate, and the distinction matters because `Recover` dispatches on `ErrorType`:
+Easy to mix up, and worth getting right because `Recover` dispatches on `ErrorType`.
 
-- **`Unauthorized`** – the caller is not authenticated; credentials are missing or invalid. Re-authenticating may make the operation succeed.
-- **`Forbidden`** – the caller *is* authenticated but lacks permission. Re-authenticating will not help; the operation can never succeed for this caller.
+- `Unauthorized`: the caller is not authenticated. Credentials are missing or invalid, so
+  re-authenticating may help.
+- `Forbidden`: the caller is authenticated but lacks permission. Re-authenticating changes nothing.
 
 ```csharp
-// Correct: only a genuine authentication failure triggers a token refresh
+// Only a real authentication failure triggers a token refresh.
+// A Forbidden error flows straight through instead of retrying pointlessly.
 var profile = await FetchProfile(token)
     .RecoverAsync(ErrorType.Unauthorized, _ => RefreshTokenAndRetry());
-
-// A Forbidden error flows straight through — no pointless refresh-and-retry
 ```
 
-> **Note:** `ErrorType.Forbidden` is declared last in the enum so the numeric values of the existing members stay stable for callers that persist or transmit `ErrorType` as an integer.
+> **Note:** `ErrorType.Forbidden` sits last in the enum so the numeric values of the older members
+> stay stable for anyone storing or transmitting `ErrorType` as an integer.
 
-### Extension Methods
+### Adding context
 
-Fluently augment or transform existing errors:
+Every extension returns a new `Error`.
 
 ```csharp
 var error = Error.Failure("E001", "Base error");
 
-// Prepend or replace the message
-var withMessage  = error.WithMessage("Additional context");
-
-// Merge metadata dictionary
-var mergedMeta   = error.WithMetadata(new Dictionary<string, object> {{ "UserId", 42 }});
-
-// Add or update single key
-var keyedMeta    = error.WithMetadata("RetryCount", 3);
-
-// Add metadata using type name as key
-var typedMeta    = error.WithMetadata(TimeSpan.FromSeconds(30));
+error.WithMessage("Additional context");    // "Additional context: Base error"
+error.WithCode("E002");                     // re-code, keep the rest
+error.WithType(ErrorType.Validation);       // re-categorise, keep the rest
+error.WithMetadata("RetryCount", 3);        // add or overwrite one key
+error.WithMetadata(TimeSpan.FromSeconds(30)); // keyed by the type's full name
+error.WithMetadata(new Dictionary<string, object> { ["UserId"] = 42 }); // merge a dictionary
 ```
 
----
+Read it back with `GetMetadata<T>(key)`, which throws `InvalidCastException` on a type mismatch, or
+`GetMetadata<T>()`, which returns the first value of that type. Both return `default` when there is
+nothing to find.
 
-## Credits - Inspiration
+### Equality
 
-- [Zoran Horvat](https://www.youtube.com/@zoran-horvat)
-- [Gui Ferreira](https://www.youtube.com/watch?v=C_u1WottRA0)
-- [Milan Jovanović](https://www.youtube.com/watch?v=WCCkEe_Hy2Y)
-- [ErrorOr](https://github.com/amantinband/error-or)
+`Error` uses the default record struct equality, so `Type`, `Code` and `Message` compare by value
+but `Metadata` compares by reference. Two errors built separately with no metadata are equal; two
+carrying equivalent metadata are not, unless they share the same dictionary instance. Compare
+`Type`, `Code` and `Message` directly when you want identity.
+

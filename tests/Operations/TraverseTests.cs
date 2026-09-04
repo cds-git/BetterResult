@@ -294,7 +294,7 @@ public class TraverseTests
         // Arrange
         var collectionTask = Task.FromResult<IEnumerable<int>>(new[] { 1, 2, 3 });
 
-        // Act - passing Task directly to static method
+        // Act
         var result = await Result.Traverse(collectionTask, n => Result<int>.Success(n * 2));
 
         // Assert
@@ -324,7 +324,7 @@ public class TraverseTests
         // Arrange
         var collectionTask = Task.FromResult<IEnumerable<int>>(new[] { 1, 2, 3 });
 
-        // Act - passing Task directly with async selector
+        // Act
         var result = await Result.TraverseAsync(collectionTask, async n =>
         {
             await Task.Delay(1);
@@ -339,7 +339,7 @@ public class TraverseTests
     [Fact]
     public async Task TraverseAsync_Should_WorkWithAsyncGetter()
     {
-        // Arrange - simulating your exact scenario
+        // Arrange
         async Task<IEnumerable<int>> GetListAsync()
         {
             await Task.Delay(1);

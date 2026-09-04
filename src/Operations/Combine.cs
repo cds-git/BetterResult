@@ -4,8 +4,8 @@ public static partial class Result
 {
     // 2 parameters
     /// <summary>
-    /// Combines two independent Results into a single Result containing a tuple of both values.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
+    /// Combines independent results into one holding a tuple of every value. Short-circuits on the
+    /// first failure and returns its error. Overloads take 2 to 8 results.
     /// </summary>
     public static Result<(T1, T2)> Combine<T1, T2>(
         Result<T1> result1,
@@ -17,8 +17,8 @@ public static partial class Result
     }
 
     /// <summary>
-    /// Combines two independent Results and applies a selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
+    /// Combines independent results and feeds the values to <paramref name="selector"/>. Short-circuits
+    /// on the first failure and returns its error. Overloads take 2 to 8 results.
     /// </summary>
     public static Result<TResult> Combine<T1, T2, TResult>(
         Result<T1> result1,
@@ -31,10 +31,7 @@ public static partial class Result
     }
 
     // 3 parameters
-    /// <summary>
-    /// Combines three independent Results into a single Result containing a tuple of all values.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2}(Result{T1}, Result{T2})"/>
     public static Result<(T1, T2, T3)> Combine<T1, T2, T3>(
         Result<T1> result1,
         Result<T2> result2,
@@ -46,10 +43,7 @@ public static partial class Result
         return (result1.Value, result2.Value, result3.Value);
     }
 
-    /// <summary>
-    /// Combines three independent Results and applies a selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
     public static Result<TResult> Combine<T1, T2, T3, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -63,10 +57,7 @@ public static partial class Result
     }
 
     // 4 parameters
-    /// <summary>
-    /// Combines four independent Results into a single Result containing a tuple of all values.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2}(Result{T1}, Result{T2})"/>
     public static Result<(T1, T2, T3, T4)> Combine<T1, T2, T3, T4>(
         Result<T1> result1,
         Result<T2> result2,
@@ -80,10 +71,7 @@ public static partial class Result
         return (result1.Value, result2.Value, result3.Value, result4.Value);
     }
 
-    /// <summary>
-    /// Combines four independent Results and applies a selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
     public static Result<TResult> Combine<T1, T2, T3, T4, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -99,10 +87,7 @@ public static partial class Result
     }
 
     // 5 parameters
-    /// <summary>
-    /// Combines five independent Results into a single Result containing a tuple of all values.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2}(Result{T1}, Result{T2})"/>
     public static Result<(T1, T2, T3, T4, T5)> Combine<T1, T2, T3, T4, T5>(
         Result<T1> result1,
         Result<T2> result2,
@@ -118,10 +103,7 @@ public static partial class Result
         return (result1.Value, result2.Value, result3.Value, result4.Value, result5.Value);
     }
 
-    /// <summary>
-    /// Combines five independent Results and applies a selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
     public static Result<TResult> Combine<T1, T2, T3, T4, T5, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -139,10 +121,7 @@ public static partial class Result
     }
 
     // 6 parameters
-    /// <summary>
-    /// Combines six independent Results into a single Result containing a tuple of all values.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2}(Result{T1}, Result{T2})"/>
     public static Result<(T1, T2, T3, T4, T5, T6)> Combine<T1, T2, T3, T4, T5, T6>(
         Result<T1> result1,
         Result<T2> result2,
@@ -160,10 +139,7 @@ public static partial class Result
         return (result1.Value, result2.Value, result3.Value, result4.Value, result5.Value, result6.Value);
     }
 
-    /// <summary>
-    /// Combines six independent Results and applies a selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
     public static Result<TResult> Combine<T1, T2, T3, T4, T5, T6, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -183,10 +159,7 @@ public static partial class Result
     }
 
     // 7 parameters
-    /// <summary>
-    /// Combines seven independent Results into a single Result containing a tuple of all values.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2}(Result{T1}, Result{T2})"/>
     public static Result<(T1, T2, T3, T4, T5, T6, T7)> Combine<T1, T2, T3, T4, T5, T6, T7>(
         Result<T1> result1,
         Result<T2> result2,
@@ -206,10 +179,7 @@ public static partial class Result
         return (result1.Value, result2.Value, result3.Value, result4.Value, result5.Value, result6.Value, result7.Value);
     }
 
-    /// <summary>
-    /// Combines seven independent Results and applies a selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
     public static Result<TResult> Combine<T1, T2, T3, T4, T5, T6, T7, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -231,10 +201,7 @@ public static partial class Result
     }
 
     // 8 parameters
-    /// <summary>
-    /// Combines eight independent Results into a single Result containing a tuple of all values.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2}(Result{T1}, Result{T2})"/>
     public static Result<(T1, T2, T3, T4, T5, T6, T7, T8)> Combine<T1, T2, T3, T4, T5, T6, T7, T8>(
         Result<T1> result1,
         Result<T2> result2,
@@ -256,10 +223,7 @@ public static partial class Result
         return (result1.Value, result2.Value, result3.Value, result4.Value, result5.Value, result6.Value, result7.Value, result8.Value);
     }
 
-    /// <summary>
-    /// Combines eight independent Results and applies a selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    /// <inheritdoc cref="Combine{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
     public static Result<TResult> Combine<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -282,12 +246,12 @@ public static partial class Result
         return selector(result1.Value, result2.Value, result3.Value, result4.Value, result5.Value, result6.Value, result7.Value, result8.Value);
     }
 
-    // Async selector overloads (2-8 parameters)
+    // Async selector overloads
 
-    // 2 parameters with async selector
+    // 2 parameters
     /// <summary>
-    /// Combines two independent Results and applies an async selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
+    /// Same as <see cref="Combine{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
+    /// but with an async selector. Overloads take 2 to 8 results.
     /// </summary>
     public static async Task<Result<TResult>> CombineAsync<T1, T2, TResult>(
         Result<T1> result1,
@@ -300,11 +264,8 @@ public static partial class Result
         return value;
     }
 
-    // 3 parameters with async selector
-    /// <summary>
-    /// Combines three independent Results and applies an async selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    // 3 parameters
+    /// <inheritdoc cref="CombineAsync{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, Task{TResult}})"/>
     public static async Task<Result<TResult>> CombineAsync<T1, T2, T3, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -318,11 +279,8 @@ public static partial class Result
         return value;
     }
 
-    // 4 parameters with async selector
-    /// <summary>
-    /// Combines four independent Results and applies an async selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    // 4 parameters
+    /// <inheritdoc cref="CombineAsync{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, Task{TResult}})"/>
     public static async Task<Result<TResult>> CombineAsync<T1, T2, T3, T4, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -338,11 +296,8 @@ public static partial class Result
         return value;
     }
 
-    // 5 parameters with async selector
-    /// <summary>
-    /// Combines five independent Results and applies an async selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    // 5 parameters
+    /// <inheritdoc cref="CombineAsync{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, Task{TResult}})"/>
     public static async Task<Result<TResult>> CombineAsync<T1, T2, T3, T4, T5, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -360,11 +315,8 @@ public static partial class Result
         return value;
     }
 
-    // 6 parameters with async selector
-    /// <summary>
-    /// Combines six independent Results and applies an async selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    // 6 parameters
+    /// <inheritdoc cref="CombineAsync{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, Task{TResult}})"/>
     public static async Task<Result<TResult>> CombineAsync<T1, T2, T3, T4, T5, T6, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -384,11 +336,8 @@ public static partial class Result
         return value;
     }
 
-    // 7 parameters with async selector
-    /// <summary>
-    /// Combines seven independent Results and applies an async selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    // 7 parameters
+    /// <inheritdoc cref="CombineAsync{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, Task{TResult}})"/>
     public static async Task<Result<TResult>> CombineAsync<T1, T2, T3, T4, T5, T6, T7, TResult>(
         Result<T1> result1,
         Result<T2> result2,
@@ -410,11 +359,8 @@ public static partial class Result
         return value;
     }
 
-    // 8 parameters with async selector
-    /// <summary>
-    /// Combines eight independent Results and applies an async selector function to produce a new Result.
-    /// Returns success only if all Results are successful, otherwise returns the first error encountered.
-    /// </summary>
+    // 8 parameters
+    /// <inheritdoc cref="CombineAsync{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, Task{TResult}})"/>
     public static async Task<Result<TResult>> CombineAsync<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(
         Result<T1> result1,
         Result<T2> result2,
