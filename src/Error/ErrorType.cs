@@ -31,7 +31,9 @@ public enum ErrorType
     Conflict,
 
     /// <summary>
-    /// The caller is either not authenticated or does not have the required permission.
+    /// The caller is not authenticated, or the supplied credentials are missing or invalid.
+    /// Re-authenticating may allow the operation to succeed. Use <see cref="Forbidden"/> when the
+    /// caller is authenticated but lacks permission.
     /// </summary>
     Unauthorized,
 
@@ -43,5 +45,16 @@ public enum ErrorType
     /// <summary>
     /// The operation did not complete within the allotted time.
     /// </summary>
-    Timeout 
+    Timeout,
+
+    /// <summary>
+    /// The caller is authenticated but does not have permission to perform the operation.
+    /// Re-authenticating will not help. Use <see cref="Unauthorized"/> when the caller is not
+    /// authenticated at all.
+    /// </summary>
+    /// <remarks>
+    /// Declared last so that the numeric values of the preceding members remain stable for
+    /// callers that persist or transmit <see cref="ErrorType"/> as an integer.
+    /// </remarks>
+    Forbidden
 }

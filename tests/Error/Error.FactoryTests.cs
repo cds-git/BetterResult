@@ -43,6 +43,59 @@ public class ErrorFactoryTests
     }
 
     [Fact]
+    public void Forbidden_Should_CreateError_WithCorrectProperties()
+    {
+        // Act
+        var error = Error.Forbidden("E403", "Insufficient permission");
+
+        // Assert
+        error.Code.Should().Be("E403");
+        error.Message.Should().Be("Insufficient permission");
+        error.Type.Should().Be(ErrorType.Forbidden);
+        error.Metadata.Should().BeNull();
+    }
+
+    [Fact]
+    public void Forbidden_Should_UseDefaults_When_NoArgumentsSupplied()
+    {
+        // Act
+        var error = Error.Forbidden();
+
+        // Assert
+        error.Code.Should().Be("General.Forbidden");
+        error.Message.Should().Be("Forbidden");
+        error.Type.Should().Be(ErrorType.Forbidden);
+    }
+
+    [Fact]
+    public void Forbidden_Should_BeDistinctFrom_Unauthorized()
+    {
+        // Act
+        var forbidden = Error.Forbidden("E403", "Insufficient permission");
+        var unauthorized = Error.Unauthorized("E401", "Not authenticated");
+
+        // Assert
+        forbidden.Type.Should().NotBe(unauthorized.Type);
+    }
+
+    [Theory]
+    [InlineData(ErrorType.Failure, 0)]
+    [InlineData(ErrorType.Unexpected, 1)]
+    [InlineData(ErrorType.Validation, 2)]
+    [InlineData(ErrorType.NotFound, 3)]
+    [InlineData(ErrorType.Conflict, 4)]
+    [InlineData(ErrorType.Unauthorized, 5)]
+    [InlineData(ErrorType.Unavailable, 6)]
+    [InlineData(ErrorType.Timeout, 7)]
+    [InlineData(ErrorType.Forbidden, 8)]
+    public void ErrorType_Should_HaveStableNumericValues(ErrorType type, int expected)
+    {
+        // Callers may persist or transmit ErrorType as an integer, so new members must be
+        // appended rather than inserted. Reordering this enum is a breaking change.
+        ((int)type).Should().Be(expected);
+    }
+
+    [Fact]
     public void Custom_Should_CreateError_WithCorrectProperties()
     {
         // Act

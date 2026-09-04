@@ -64,6 +64,8 @@ public readonly partial record struct Error
 
     /// <summary>
     /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Unauthorized"/> from a code and message.
+    /// Use this when the caller is not authenticated; use <see cref="Forbidden"/> when the caller is
+    /// authenticated but lacks the required permission.
     /// </summary>
     /// <param name="code">The unique error code.</param>
     /// <param name="message">The error description.</param>
@@ -73,6 +75,20 @@ public readonly partial record struct Error
         string message = "Unauthorized",
         IReadOnlyDictionary<string, object>? metadata = null) =>
             new(ErrorType.Unauthorized, code, message, metadata);
+
+    /// <summary>
+    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Forbidden"/> from a code and message.
+    /// Use this when the caller is authenticated but lacks the required permission; use
+    /// <see cref="Unauthorized"/> when the caller is not authenticated at all.
+    /// </summary>
+    /// <param name="code">The unique error code.</param>
+    /// <param name="message">The error description.</param>
+    /// <param name="metadata">A dictionary which provides optional space for information.</param>
+    public static Error Forbidden(
+        string code = "General.Forbidden",
+        string message = "Forbidden",
+        IReadOnlyDictionary<string, object>? metadata = null) =>
+            new(ErrorType.Forbidden, code, message, metadata);
 
     /// <summary>
     /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Unavailable"/> from a code and message.
