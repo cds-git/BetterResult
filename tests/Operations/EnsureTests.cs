@@ -292,7 +292,7 @@ public class EnsureTests
         // Act
         var ensured = result
             .Ensure(u => u.Age >= 18, u => Error.Validation("UNDERAGE", $"User {u.Name} is only {u.Age}"))
-            .Ensure(u => u.IsActive, Error.Unauthorized("INACTIVE", "User is not active"))
+            .Ensure(u => u.IsActive, Error.Forbidden("INACTIVE", "User is not active"))
             .Ensure(u => !string.IsNullOrEmpty(u.Name), Error.Validation("INVALID_NAME", "Name is required"));
 
         // Assert

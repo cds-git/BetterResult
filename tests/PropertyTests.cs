@@ -245,4 +245,16 @@ public class PropertyTests
             ran.Should().Be(r.IsFailure);
         });
     }
+
+    [Fact]
+    public void Property_TapAlways_PreservesResult_AndAlwaysRuns()
+    {
+        ResultGen.Sample(r =>
+        {
+            var ran = false;
+            var tapped = r.TapAlways(_ => ran = true);
+            tapped.Should().Be(r);
+            ran.Should().BeTrue();
+        });
+    }
 }

@@ -19,6 +19,7 @@ it forces developers to acknowledge and manage errors at every step, resulting i
   - [MapError - Error Translation](#maperror---error-translation)
   - [Tap - Side Effects on Success](#tap---side-effects-on-success)
   - [TapError - Side Effects on Failure](#taperror---side-effects-on-failure)
+  - [TapAlways - Side Effects on Both Branches](#tapalways---side-effects-on-both-branches)
   - [Match - Result Folding](#match---result-folding)
   - [Try - Exception Handling](#try---exception-handling)
   - [Ensure - Validation Guards](#ensure---validation-guards)
@@ -430,6 +431,51 @@ var pipeline = LoadData()
 
 **Key point**: TapError actions receive the error but don't modify the result. Failed results remain failed, successful results are untouched.
 
+### TapAlways - Side Effects on Both Branches
+
+**Purpose**: Executes a side effect on success *and* failure, then returns the original result unchanged.
+
+**When to use**: When the same work has to happen either way — stopping a timer, decrementing an in-flight gauge, emitting a "completed" metric tagged with the outcome. Chaining `.Tap(...).TapError(...)` covers the case where the two branches do *different* things; `TapAlways` exists for the case where they do the *same* thing, so the closure isn't duplicated and can't drift.
+
+```csharp
+// Shared work on both branches
+var stopwatch = Stopwatch.StartNew();
+
+var result = await ProcessOrderAsync(order)
+    .TapAlwaysAsync(_ => stopwatch.Stop())
+    .TapAsync(o => logger.LogInfo($"Order {o.Id} placed in {stopwatch.Elapsed}"))
+    .TapErrorAsync(e => logger.LogError($"Order failed after {stopwatch.Elapsed}: {e.Message}"));
+
+// Inspect the outcome in a single call
+await ChargeCardAsync(payment)
+    .TapAlwaysAsync(r => metrics.IncrementCounter(
+        "payments.attempted",
+        tags: new() { ["outcome"] = r.IsSuccess ? "success" : "failure" }));
+
+// TapAlways runs at its position in the chain, not at the end of the pipeline,
+// so place it after the last step it is meant to measure
+using var scope = serviceProvider.CreateScope();
+
+var data = LoadData(scope)
+    .Map(Transform)
+    .TapAlways(_ => concurrencyGauge.Decrement());
+```
+
+> [!NOTE]
+> Two things to know about the action:
+>
+> - It receives the result **un-narrowed**. Check `IsSuccess`/`IsFailure` before reading `Value` or `Error` — each throws on the branch it does not belong to.
+> - It runs only once a `Result<T>` actually exists. If an earlier step **throws**, or an awaited task faults, the exception unwinds straight past `TapAlways` and the action never runs:
+>
+>   ```csharp
+>   ThrowingStep()                // throws -- not a failed Result, an exception
+>       .TapAlways(_ => cleanup()); // never reached
+>   ```
+>
+>   Use `using` or a real `try`/`finally` around the pipeline for resource cleanup; reach for `TapAlways` for instrumentation — timers, counters, completion metrics.
+
+**Key point**: `TapAlways` returns the original result unchanged, so it composes anywhere in a chain. Exceptions thrown by the action propagate to the caller, exactly as with `Tap` and `TapError` — and on the failure branch that replaces a handled `Error` with a thrown exception, so keep the action non-throwing.
+
 ### Match - Result Folding
 
 **Purpose**: Converts a Result into a concrete value by providing handlers for both success and failure cases.
@@ -461,6 +507,7 @@ var actionResult = await ValidateAndProcessAsync(input).MatchAsync(
         ErrorType.Validation => BadRequest(error.Message),
         ErrorType.NotFound => NotFound(error.Message),
         ErrorType.Unauthorized => Unauthorized(error.Message),
+        ErrorType.Forbidden => Forbid(error.Message),
         _ => StatusCode(500, "Internal server error")
     }
 );
@@ -510,7 +557,8 @@ async Task<IActionResult> UpdateUserProfileAsync(int userId, UpdateProfileReques
             {
                 ErrorType.NotFound => NotFound(error.Message),
                 ErrorType.Validation => BadRequest(error.Message),
-                ErrorType.Unauthorized => Forbid(error.Message),
+                ErrorType.Unauthorized => Unauthorized(error.Message),
+                ErrorType.Forbidden => Forbid(error.Message),
                 _ => StatusCode(500, "Internal server error")
             }
         );
@@ -591,7 +639,7 @@ Result<int> age = GetAge()
 // With error factory for dynamic messages
 Result<User> user = GetUser(userId)
     .Ensure(u => u.Age >= 18, u => Error.Validation("UNDERAGE", $"User {u.Name} is only {u.Age} years old"))
-    .Ensure(u => u.IsActive, Error.Unauthorized("INACTIVE", "User account is not active"));
+    .Ensure(u => u.IsActive, Error.Forbidden("INACTIVE", "User account is not active"));
 
 // Chaining validations with transformations
 Result<Order> order = GetOrder(orderId)
@@ -608,7 +656,7 @@ Result<Order> validatedOrder = await GetOrder(orderId)
     )
     .EnsureAsync(
         async o => await fraudService.IsLegitimate(o),
-        Error.Unauthorized("FRAUD_DETECTED", "Order flagged as suspicious")
+        Error.Forbidden("FRAUD_DETECTED", "Order flagged as suspicious")
     );
 
 // Complex validation pipeline
@@ -1166,13 +1214,31 @@ var unexpected = Error.Unexpected("E100", "Something went wrong");
 var validation = Error.Validation("E102", "Invalid input");
 var notFound   = Error.NotFound("E404", "Item not found");
 var conflict   = Error.Conflict("E409", "Conflict detected");
-var unauthorized = Error.Unauthorized("E401", "Access denied");
+var unauthorized = Error.Unauthorized("E401", "Not authenticated");
+var forbidden    = Error.Forbidden("E403", "Insufficient permission");
 var unavailable  = Error.Unavailable("E503", "Service unavailable");
 var timeout      = Error.Timeout("E408", "Operation timed out");
 
 // Custom error with specific type
 var custom = Error.Create(ErrorType.Validation, "E123", "Custom validation error");
 ```
+
+#### Unauthorized vs. Forbidden
+
+These two are easy to conflate, and the distinction matters because `Recover` dispatches on `ErrorType`:
+
+- **`Unauthorized`** – the caller is not authenticated; credentials are missing or invalid. Re-authenticating may make the operation succeed.
+- **`Forbidden`** – the caller *is* authenticated but lacks permission. Re-authenticating will not help; the operation can never succeed for this caller.
+
+```csharp
+// Correct: only a genuine authentication failure triggers a token refresh
+var profile = await FetchProfile(token)
+    .RecoverAsync(ErrorType.Unauthorized, _ => RefreshTokenAndRetry());
+
+// A Forbidden error flows straight through — no pointless refresh-and-retry
+```
+
+> **Note:** `ErrorType.Forbidden` is declared last in the enum so the numeric values of the existing members stay stable for callers that persist or transmit `ErrorType` as an integer.
 
 ### Extension Methods
 
