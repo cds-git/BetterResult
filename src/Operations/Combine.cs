@@ -4,8 +4,9 @@ public static partial class Result
 {
     // 2 parameters
     /// <summary>
-    /// Combines independent results into one holding a tuple of every value. Short-circuits on the
-    /// first failure and returns its error. Overloads take 2 to 8 results.
+    /// Combines independent results into one holding a tuple of every value, or the first error.
+    /// The arguments are evaluated at the call site, so every result is computed either way.
+    /// Overloads take 2 to 8 results.
     /// </summary>
     public static Result<(T1, T2)> Combine<T1, T2>(
         Result<T1> result1,
@@ -17,8 +18,9 @@ public static partial class Result
     }
 
     /// <summary>
-    /// Combines independent results and feeds the values to <paramref name="selector"/>. Short-circuits
-    /// on the first failure and returns its error. Overloads take 2 to 8 results.
+    /// Combines independent results and feeds the values to <paramref name="selector"/>, or returns
+    /// the first error. The arguments are evaluated at the call site, so every result is computed
+    /// either way. Overloads take 2 to 8 results.
     /// </summary>
     public static Result<TResult> Combine<T1, T2, TResult>(
         Result<T1> result1,

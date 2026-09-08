@@ -156,12 +156,16 @@ string outcome = await ValidatePermissionsAsync(currentUser, targetUserId)  // T
 
 ## Operations
 
-Every operation has sync and async variants. They all short-circuit, except `TapAlways`: once a
-result is a failure, the rest of the chain is skipped and the error falls through to the end.
+Every operation has sync and async variants. The ones that work on the value (`Bind`, `Map`, `Tap`,
+`Ensure`, `Try`, `Zip`, `Combine`) short-circuit: once a result is a failure their callback is
+skipped and the error falls through to the end of the chain. The ones that exist to deal with
+failure (`TapError`, `MapError`, `Recover`, `Match`) run on exactly the branch you would expect, and
+`TapAlways` runs on both.
 
-On naming, use `XAsync` when the callback is async. The chainable `Result<T>` operations also use
-`XAsync` when you chain off a `Task<Result<T>>`, so `await GetUserAsync(id).MapAsync(u => u.Name)`
-works with a plain sync lambda.
+On naming, use `XAsync` when the callback is async. The operations that hang off a `Result<T>` also
+take `XAsync` when you chain from a `Task<Result<T>>`, so a plain sync lambda still works after
+`await GetUserAsync(id)`. `Zip`, `Sequence`, `Traverse` and `Partition` are the exceptions: they
+keep their plain name when only the source is a task.
 
 ### Bind
 
@@ -579,7 +583,8 @@ nothing to find.
 ### Equality
 
 `Error` uses the default record struct equality, so `Type`, `Code` and `Message` compare by value
-but `Metadata` compares by reference. Two errors built separately with no metadata are equal; two
-carrying equivalent metadata are not, unless they share the same dictionary instance. Compare
-`Type`, `Code` and `Message` directly when you want identity.
+but `Metadata` compares by reference. Two errors built separately with no metadata are equal. Two
+carrying metadata are not, even if you pass the same dictionary to both: the constructor copies it,
+so each error ends up with its own instance. Compare `Type`, `Code` and `Message` directly when you
+want identity.
 

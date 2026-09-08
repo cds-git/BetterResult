@@ -54,7 +54,8 @@ public static class ErrorExtensions
     }
 
     /// <summary>
-    /// Adds or overwrites a single metadata entry. A null value is ignored.
+    /// Adds or overwrites a single metadata entry. A null value is not stored, but you still get a
+    /// new error with a fresh metadata instance, which will not compare equal to the original.
     /// </summary>
     public static Error WithMetadata<T>(this Error error, string key, T? metadata)
     {
@@ -77,7 +78,8 @@ public static class ErrorExtensions
 
     /// <summary>
     /// Adds or overwrites a metadata entry keyed by the full name of <typeparamref name="T"/>.
-    /// The namespace is included so types sharing a simple name do not collide. A null value is ignored.
+    /// The namespace is included so types sharing a simple name do not collide. A null value returns
+    /// the error unchanged.
     /// </summary>
     public static Error WithMetadata<T>(this Error error, T? metadata)
     {
