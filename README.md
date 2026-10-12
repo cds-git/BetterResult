@@ -426,12 +426,12 @@ every item processed.
 collect the values.
 
 ```csharp
-Result<IReadOnlyList<User>> users = Result.Traverse(userIds, id => GetUser(id));
+Result<IReadOnlyList<User>> users = userIds.Traverse(id => GetUser(id));
 
-Result<IReadOnlyList<Email>> emails = Result.Traverse(addresses, Email.TryCreate);
+Result<IReadOnlyList<Email>> emails = addresses.Traverse(Email.TryCreate);
 
-Result<IReadOnlyList<Product>> products = await Result
-    .TraverseAsync(productIds, id => FetchProductAsync(id));
+Result<IReadOnlyList<Product>> products = await productIds
+    .TraverseAsync(id => FetchProductAsync(id));
 ```
 
 Also stops at the first failure. Use `Sequence` when you already hold results, `Traverse` when you

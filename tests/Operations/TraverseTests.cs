@@ -9,7 +9,7 @@ public class TraverseTests
         var numbers = new[] { 1, 2, 3 };
 
         // Act
-        var result = Result.Traverse(numbers, n => Result<int>.Success(n * 2));
+        var result = numbers.Traverse(n => Result<int>.Success(n * 2));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -25,7 +25,7 @@ public class TraverseTests
         var error2 = Error.Validation("ERROR2", "Second error");
 
         // Act
-        var result = Result.Traverse(numbers, n => n switch
+        var result = numbers.Traverse(n => n switch
         {
             2 => Result<int>.Failure(error1),
             4 => Result<int>.Failure(error2),
@@ -44,7 +44,7 @@ public class TraverseTests
         var numbers = Array.Empty<int>();
 
         // Act
-        var result = Result.Traverse(numbers, n => Result<int>.Success(n * 2));
+        var result = numbers.Traverse(n => Result<int>.Success(n * 2));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -60,7 +60,7 @@ public class TraverseTests
         var executionCount = 0;
 
         // Act
-        var result = Result.Traverse(numbers, n =>
+        var result = numbers.Traverse(n =>
         {
             executionCount++;
             return n == 1 ? Result<int>.Failure(error) : Result<int>.Success(n);
@@ -79,7 +79,7 @@ public class TraverseTests
         var userIds = new[] { 1, 2, 3 };
 
         // Act
-        var result = Result.Traverse(userIds, id => Result<User>.Success(new User { Id = id, Name = $"User{id}" }));
+        var result = userIds.Traverse(id => Result<User>.Success(new User { Id = id, Name = $"User{id}" }));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -94,7 +94,7 @@ public class TraverseTests
         var userIds = new[] { 1, 2, 3 };
 
         // Act
-        var result = Result.Traverse(userIds, id => GetUser(id))
+        var result = userIds.Traverse(id => GetUser(id))
             .Map(users => users.Count());
 
         // Assert
@@ -109,7 +109,7 @@ public class TraverseTests
         var userIds = new[] { 1, 999, 3 }; // 999 doesn't exist
 
         // Act
-        var result = Result.Traverse(userIds, id => GetUser(id));
+        var result = userIds.Traverse(id => GetUser(id));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -123,7 +123,7 @@ public class TraverseTests
         var numbers = new[] { 1, 2, 3 };
 
         // Act
-        var result = Result.Traverse(numbers, n => Result<int>.Success(n * 2));
+        var result = numbers.Traverse(n => Result<int>.Success(n * 2));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -137,7 +137,7 @@ public class TraverseTests
         var numbers = new[] { 1, 2, 3 };
 
         // Act
-        var result = await Result.TraverseAsync(numbers, n => Task.FromResult(Result<int>.Success(n * 2)));
+        var result = await numbers.TraverseAsync(n => Task.FromResult(Result<int>.Success(n * 2)));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -153,7 +153,7 @@ public class TraverseTests
         var error2 = Error.Validation("ERROR2", "Second error");
 
         // Act
-        var result = await Result.TraverseAsync(numbers, n => Task.FromResult(n switch
+        var result = await numbers.TraverseAsync(n => Task.FromResult(n switch
         {
             2 => Result<int>.Failure(error1),
             4 => Result<int>.Failure(error2),
@@ -172,7 +172,7 @@ public class TraverseTests
         var numbers = Array.Empty<int>();
 
         // Act
-        var result = await Result.TraverseAsync(numbers, n => Task.FromResult(Result<int>.Success(n * 2)));
+        var result = await numbers.TraverseAsync(n => Task.FromResult(Result<int>.Success(n * 2)));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -188,7 +188,7 @@ public class TraverseTests
         var executionCount = 0;
 
         // Act
-        var result = await Result.TraverseAsync(numbers, async n =>
+        var result = await numbers.TraverseAsync(async n =>
         {
             executionCount++;
             await Task.Delay(1); // Simulate async work
@@ -208,7 +208,7 @@ public class TraverseTests
         var userIds = new[] { 1, 2, 3 };
 
         // Act
-        var result = await Result.TraverseAsync(userIds, async id =>
+        var result = await userIds.TraverseAsync(async id =>
         {
             await Task.Delay(1); // Simulate async work
             return Result<User>.Success(new User { Id = id, Name = $"User{id}" });
@@ -227,7 +227,7 @@ public class TraverseTests
         var userIds = new[] { 1, 2, 3 };
 
         // Act
-        var result = await Result.TraverseAsync(userIds, async id => await GetUserAsync(id))
+        var result = await userIds.TraverseAsync(async id => await GetUserAsync(id))
             .BindAsync(users => Task.FromResult(Result<int>.Success(users.Count())));
 
         // Assert
@@ -242,7 +242,7 @@ public class TraverseTests
         var userIds = new[] { 1, 999, 3 }; // 999 doesn't exist
 
         // Act
-        var result = await Result.TraverseAsync(userIds, async id => await GetUserAsync(id));
+        var result = await userIds.TraverseAsync(async id => await GetUserAsync(id));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -256,7 +256,7 @@ public class TraverseTests
         var data = new[] { "1", "2", "3" };
 
         // Act
-        var result = Result.Traverse(data, s =>
+        var result = data.Traverse(s =>
         {
             if (int.TryParse(s, out var n))
                 return Result<int>.Success(n);
@@ -275,7 +275,7 @@ public class TraverseTests
         var data = new[] { "1", "abc", "3" };
 
         // Act
-        var result = Result.Traverse(data, s =>
+        var result = data.Traverse(s =>
         {
             if (int.TryParse(s, out var n))
                 return Result<int>.Success(n);
@@ -295,7 +295,7 @@ public class TraverseTests
         var collectionTask = Task.FromResult<IEnumerable<int>>(new[] { 1, 2, 3 });
 
         // Act
-        var result = await Result.Traverse(collectionTask, n => Result<int>.Success(n * 2));
+        var result = await collectionTask.Traverse(n => Result<int>.Success(n * 2));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -310,7 +310,7 @@ public class TraverseTests
         var error = Error.Validation("ERROR", "Error at 2");
 
         // Act
-        var result = await Result.Traverse(collectionTask, n =>
+        var result = await collectionTask.Traverse(n =>
             n == 2 ? Result<int>.Failure(error) : Result<int>.Success(n * 2));
 
         // Assert
@@ -325,7 +325,7 @@ public class TraverseTests
         var collectionTask = Task.FromResult<IEnumerable<int>>(new[] { 1, 2, 3 });
 
         // Act
-        var result = await Result.TraverseAsync(collectionTask, async n =>
+        var result = await collectionTask.TraverseAsync(async n =>
         {
             await Task.Delay(1);
             return Result<int>.Success(n * 2);
@@ -346,8 +346,8 @@ public class TraverseTests
             return new[] { 1, 2, 3 };
         }
 
-        // Act - Result.TraverseAsync(Task<IEnumerable<T>>, Func<T, Task<Result<U>>>)
-        var result = await Result.TraverseAsync(GetListAsync(), async id => await GetUserAsync(id));
+        // Act - Task<IEnumerable<T>>.TraverseAsync(Func<T, Task<Result<U>>>)
+        var result = await GetListAsync().TraverseAsync(async id => await GetUserAsync(id));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -365,8 +365,8 @@ public class TraverseTests
             return new[] { 1, 2, 3 };
         }
 
-        // Act - Result.Traverse(Task<IEnumerable<T>>, Func<T, Result<U>>)
-        var result = await Result.Traverse(GetUserIdsAsync(), id => GetUser(id));
+        // Act - Task<IEnumerable<T>>.Traverse(Func<T, Result<U>>)
+        var result = await GetUserIdsAsync().Traverse(id => GetUser(id));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -384,15 +384,13 @@ public class TraverseTests
         }
 
         // Act - complex pipeline with Task-wrapped collection
-        var result = await Result.TraverseAsync(
-            FetchDataAsync(),
-            async s =>
-            {
-                await Task.Delay(1);
-                if (int.TryParse(s, out var n))
-                    return Result<int>.Success(n);
-                return Error.Validation("PARSE_ERROR", $"Cannot parse '{s}'");
-            });
+        var result = await FetchDataAsync().TraverseAsync(async s =>
+        {
+            await Task.Delay(1);
+            if (int.TryParse(s, out var n))
+                return Result<int>.Success(n);
+            return Error.Validation("PARSE_ERROR", $"Cannot parse '{s}'");
+        });
 
         // Assert
         result.IsSuccess.Should().BeTrue();

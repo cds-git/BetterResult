@@ -1,6 +1,9 @@
 namespace BetterResult;
 
-public static partial class Result
+/// <summary>
+/// Maps a collection through a function that returns a result. All or nothing.
+/// </summary>
+public static class TraverseExtensions
 {
     /// <summary>
     /// Applies <paramref name="selector"/> to every element and collects the values, or stops at the
@@ -8,7 +11,7 @@ public static partial class Result
     /// result.
     /// </summary>
     public static Result<IReadOnlyList<U>> Traverse<T, U>(
-        IEnumerable<T> source,
+        this IEnumerable<T> source,
         Func<T, Result<U>> selector)
     {
         var list = new List<U>();
@@ -24,7 +27,7 @@ public static partial class Result
 
     /// <inheritdoc cref="Traverse{T, U}(IEnumerable{T}, Func{T, Result{U}})"/>
     public static async Task<Result<IReadOnlyList<U>>> TraverseAsync<T, U>(
-        IEnumerable<T> source,
+        this IEnumerable<T> source,
         Func<T, Task<Result<U>>> selector)
     {
         var list = new List<U>();
@@ -40,13 +43,13 @@ public static partial class Result
 
     /// <inheritdoc cref="Traverse{T, U}(IEnumerable{T}, Func{T, Result{U}})"/>
     public static async Task<Result<IReadOnlyList<U>>> Traverse<T, U>(
-        Task<IEnumerable<T>> source,
+        this Task<IEnumerable<T>> source,
         Func<T, Result<U>> selector) =>
-            Traverse(await source.ConfigureAwait(false), selector);
+            (await source.ConfigureAwait(false)).Traverse(selector);
 
     /// <inheritdoc cref="Traverse{T, U}(IEnumerable{T}, Func{T, Result{U}})"/>
     public static async Task<Result<IReadOnlyList<U>>> TraverseAsync<T, U>(
-        Task<IEnumerable<T>> source,
+        this Task<IEnumerable<T>> source,
         Func<T, Task<Result<U>>> selector) =>
-            await TraverseAsync(await source.ConfigureAwait(false), selector).ConfigureAwait(false);
+            await (await source.ConfigureAwait(false)).TraverseAsync(selector).ConfigureAwait(false);
 }
