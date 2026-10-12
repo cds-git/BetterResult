@@ -94,7 +94,18 @@ Result<int> failure = Error.Failure("E001", "Invalid input");
 // Explicit factories
 Result<int> explicitSuccess = Result.Success(100);
 Result<int> explicitFailure = Result.Failure<int>(Error.NotFound("E404", "User not found"));
+
+// From a condition
+Result<Order> order = Result.SuccessIf(cart.Items.Any(), cart.ToOrder(), Error.Validation("EMPTY_CART", "Cart is empty"));
+Result<NoValue> allowed = Result.FailureIf(user.IsLocked, Error.Forbidden("LOCKED", "Account is locked"));
+
+// From a nullable, null becomes the error
+Result<User> user = await repository.FindAsync(id).ToResult(Error.NotFound("USER_NOT_FOUND", "No such user"));
+Result<int> port = config.Port.ToResult(Error.Validation("NO_PORT", "Port is not configured"));
 ```
+
+`SuccessIf` takes the value eagerly, so it is computed even when the condition is false. Use
+`Ensure` on an existing result when the value is expensive or only valid once the check passes.
 
 Read the value once you know which side you are on:
 
@@ -311,15 +322,23 @@ Without it there is nothing for the compiler to infer `U` from.
 Wraps code that throws, so third-party and BCL APIs can join a pipeline.
 
 ```csharp
-Result<int> parsed = Result<string>.Success("  123  ")
-    .Map(s => s.Trim())
-    .Try(s => int.Parse(s))   // FormatException becomes an Error
-    .Map(x => x * 2);
+// Start a pipeline
+Result<int> parsed = Result.Try(() => int.Parse(input));   // FormatException becomes an Error
 
-Result<User> user = Result<string>.Success(json)
-    .Try(
-        json => JsonSerializer.Deserialize<User>(json),
-        ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}"));
+Result<User?> user = Result.Try(
+    () => JsonSerializer.Deserialize<User>(json),
+    ex => Error.Validation("INVALID_JSON", $"Failed to parse JSON: {ex.Message}"));
+
+Result<string> body = await Result.TryAsync(() => httpClient.GetStringAsync(url));
+
+// Actions with nothing to return give a Result<NoValue>
+Result<NoValue> deleted = Result.Try(() => File.Delete(path));
+
+// Or continue one
+Result<int> doubled = GetInput()
+    .Map(s => s.Trim())
+    .Try(s => int.Parse(s))
+    .Map(x => x * 2);
 ```
 
 - The default mapping produces `Error.Unexpected("EXCEPTION", ex.Message)` with `ExceptionType` in

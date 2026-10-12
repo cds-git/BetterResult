@@ -19,4 +19,28 @@ public static partial class Result
     /// Creates a failed result holding <paramref name="error"/>.
     /// </summary>
     public static Result<T> Failure<T>(Error error) => Result<T>.Failure(error);
+
+    /// <summary>
+    /// Succeeds with <paramref name="value"/> when <paramref name="condition"/> is true, otherwise fails with <paramref name="error"/>.
+    /// </summary>
+    public static Result<T> SuccessIf<T>(bool condition, T value, Error error) =>
+        condition ? Result<T>.Success(value) : Result<T>.Failure(error);
+
+    /// <summary>
+    /// Succeeds when <paramref name="condition"/> is true, otherwise fails with <paramref name="error"/>.
+    /// </summary>
+    public static Result<NoValue> SuccessIf(bool condition, Error error) =>
+        SuccessIf(condition, NoValue.Instance, error);
+
+    /// <summary>
+    /// Fails with <paramref name="error"/> when <paramref name="condition"/> is true, otherwise succeeds with <paramref name="value"/>.
+    /// </summary>
+    public static Result<T> FailureIf<T>(bool condition, T value, Error error) =>
+        SuccessIf(!condition, value, error);
+
+    /// <summary>
+    /// Fails with <paramref name="error"/> when <paramref name="condition"/> is true, otherwise succeeds.
+    /// </summary>
+    public static Result<NoValue> FailureIf(bool condition, Error error) =>
+        SuccessIf(!condition, NoValue.Instance, error);
 }

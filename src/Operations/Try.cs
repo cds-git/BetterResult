@@ -1,12 +1,12 @@
 namespace BetterResult;
 
-public partial record Result<T>
+public static partial class Result
 {
-    private static Error CreateExceptionError(Exception ex) =>
+    internal static Error CreateExceptionError(Exception ex) =>
         Error.Unexpected("EXCEPTION", ex.Message)
             .WithMetadata("ExceptionType", ex.GetType().Name);
 
-    private static Error InvokeErrorMapper(Func<Exception, Error> errorMapper, Exception ex)
+    internal static Error InvokeErrorMapper(Func<Exception, Error> errorMapper, Exception ex)
     {
         var mapped = errorMapper(ex);
         // A mapper returning default(Error) would throw ArgumentException out of the catch block via
@@ -14,6 +14,100 @@ public partial record Result<T>
         return mapped.Code is null ? CreateExceptionError(ex) : mapped;
     }
 
+    /// <summary>
+    /// Runs <paramref name="operation"/> and converts any exception into an <c>Unexpected</c> error
+    /// carrying the exception message and type. <see cref="OperationCanceledException"/> is not caught.
+    /// </summary>
+    public static Result<T> Try<T>(Func<T> operation)
+    {
+        try
+        {
+            return operation();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return CreateExceptionError(ex);
+        }
+    }
+
+    /// <summary>
+    /// Runs <paramref name="operation"/> and turns any exception into an error via
+    /// <paramref name="errorMapper"/>. A mapper returning <c>default(Error)</c> falls back to the
+    /// standard <c>Unexpected</c> error.
+    /// </summary>
+    public static Result<T> Try<T>(Func<T> operation, Func<Exception, Error> errorMapper)
+    {
+        try
+        {
+            return operation();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return InvokeErrorMapper(errorMapper, ex);
+        }
+    }
+
+    /// <inheritdoc cref="Try{T}(Func{T})"/>
+    public static Result<NoValue> Try(Action operation) =>
+        Try(() =>
+        {
+            operation();
+            return NoValue.Instance;
+        });
+
+    /// <inheritdoc cref="Try{T}(Func{T}, Func{Exception, Error})"/>
+    public static Result<NoValue> Try(Action operation, Func<Exception, Error> errorMapper) =>
+        Try(() =>
+        {
+            operation();
+            return NoValue.Instance;
+        }, errorMapper);
+
+    /// <inheritdoc cref="Try{T}(Func{T})"/>
+    public static async Task<Result<T>> TryAsync<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return CreateExceptionError(ex);
+        }
+    }
+
+    /// <inheritdoc cref="Try{T}(Func{T}, Func{Exception, Error})"/>
+    public static async Task<Result<T>> TryAsync<T>(Func<Task<T>> operation, Func<Exception, Error> errorMapper)
+    {
+        try
+        {
+            return await operation().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return InvokeErrorMapper(errorMapper, ex);
+        }
+    }
+
+    /// <inheritdoc cref="Try{T}(Func{T})"/>
+    public static Task<Result<NoValue>> TryAsync(Func<Task> operation) =>
+        TryAsync(async () =>
+        {
+            await operation().ConfigureAwait(false);
+            return NoValue.Instance;
+        });
+
+    /// <inheritdoc cref="Try{T}(Func{T}, Func{Exception, Error})"/>
+    public static Task<Result<NoValue>> TryAsync(Func<Task> operation, Func<Exception, Error> errorMapper) =>
+        TryAsync(async () =>
+        {
+            await operation().ConfigureAwait(false);
+            return NoValue.Instance;
+        }, errorMapper);
+}
+
+public partial record Result<T>
+{
     /// <summary>
     /// Runs an operation that may throw and converts any exception into an <c>Unexpected</c> error
     /// carrying the exception message and type. A failure passes through and the operation never runs.
@@ -33,7 +127,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return CreateExceptionError(ex);
+            return Result.CreateExceptionError(ex);
         }
     }
 
@@ -52,7 +146,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return InvokeErrorMapper(errorMapper, ex);
+            return Result.InvokeErrorMapper(errorMapper, ex);
         }
     }
 
@@ -67,7 +161,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return CreateExceptionError(ex);
+            return Result.CreateExceptionError(ex);
         }
     }
 
@@ -82,7 +176,7 @@ public partial record Result<T>
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return InvokeErrorMapper(errorMapper, ex);
+            return Result.InvokeErrorMapper(errorMapper, ex);
         }
     }
 }
