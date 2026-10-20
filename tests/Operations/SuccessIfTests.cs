@@ -75,10 +75,10 @@ public class SuccessIfTests
     }
 
     [Fact]
-    public void SuccessIf_Should_Throw_When_ErrorIsDefaultAndConditionIsFalse()
+    public void SuccessIf_Should_Throw_When_ErrorIsNullAndConditionIsFalse()
     {
-        var act = () => Result.SuccessIf(false, 42, default);
+        var act = () => Result.SuccessIf(false, 42, null!);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<ArgumentNullException>();
     }
 }

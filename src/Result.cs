@@ -20,10 +20,8 @@ public partial record Result<T>
 
     private Result(Error error)
     {
-        if (error.Code is null)
-            throw new ArgumentException(
-                "Cannot create a failure Result from a default(Error). Construct the Error via one of the factory methods (Error.Failure, Error.Validation, Error.Create, ...).",
-                nameof(error));
+        if (error is null)
+            throw new ArgumentNullException(nameof(error));
 
         IsFailure = true;
         _value = default;
@@ -45,7 +43,7 @@ public partial record Result<T>
     /// </summary>
     /// <exception cref="InvalidOperationException">The result is a success.</exception>
     public Error Error => IsFailure
-        ? (Error)_error!
+        ? _error!
         : throw new InvalidOperationException("Cannot access the error when the result is of type success. Check IsFailure before accessing Error!");
 
     /// <summary>
@@ -55,6 +53,8 @@ public partial record Result<T>
     public T Value => IsFailure
         ? throw new InvalidOperationException($"Cannot access the value when result is of type failure. Check IsFailure before accessing value! {Error}")
         : _value!;
+
+    internal Error? ErrorOrNull => _error;
 
     /// <summary>
     /// Wraps a value in a successful result.

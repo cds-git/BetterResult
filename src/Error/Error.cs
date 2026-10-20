@@ -3,61 +3,78 @@ using System.Collections.ObjectModel;
 namespace BetterResult;
 
 /// <summary>
-/// A failure: a type, a code, a message, and optional metadata.
+/// A failure with a type, a code, a message and optional metadata. Inherit from it to give a failure
+/// its own type and typed data.
 /// </summary>
-public readonly partial record struct Error
+/// <example>
+/// <code>
+/// public sealed record UserNotFound(int UserId)
+///     : Error(ErrorType.NotFound, "USER_NOT_FOUND", $"User {UserId} was not found");
+/// </code>
+/// </example>
+public partial record Error
 {
-    private Error(ErrorType type, string code, string message, IReadOnlyDictionary<string, object>? metadata)
-    {
-        if (code is null) throw new ArgumentNullException(nameof(code));
-        if (message is null) throw new ArgumentNullException(nameof(message));
+    private readonly string _code = null!;
+    private readonly string _message = null!;
+    private readonly IReadOnlyDictionary<string, object>? _metadata;
 
+    /// <summary>
+    /// For error types that inherit from <see cref="Error"/>. Use the factories such as
+    /// <see cref="Failure"/> for an error without its own type.
+    /// </summary>
+    protected Error(ErrorType type, string code, string message, IReadOnlyDictionary<string, object>? metadata = null)
+    {
         Type = type;
         Code = code;
         Message = message;
-
-        if (metadata is null || metadata.Count == 0)
-        {
-            Metadata = null;
-        }
-        else
-        {
-            var copy = new Dictionary<string, object>(metadata.Count);
-            foreach (var kvp in metadata)
-                copy[kvp.Key] = kvp.Value;
-            Metadata = new ReadOnlyDictionary<string, object>(copy);
-        }
+        Metadata = metadata;
     }
-
-    /// <summary>
-    /// The error code, for example an HTTP status or a localization key.
-    /// </summary>
-    public string Code { get; }
-
-    /// <summary>
-    /// The error description.
-    /// </summary>
-    public string Message { get; }
 
     /// <summary>
     /// The error category.
     /// </summary>
-    public ErrorType Type { get; }
+    public ErrorType Type { get; init; }
 
     /// <summary>
-    /// Optional context. Read-only: use the <c>WithMetadata</c> extensions to get a copy with more entries.
+    /// The error code, for example an HTTP status or a localization key.
     /// </summary>
-    public IReadOnlyDictionary<string, object>? Metadata { get; }
+    public string Code
+    {
+        get => _code;
+        init => _code = value ?? throw new ArgumentNullException(nameof(Code));
+    }
 
     /// <summary>
-    /// Compares type, code, message and metadata by content. Metadata values compare with their own
-    /// <c>Equals</c>, so a collection stored as a value still compares by reference.
+    /// The error description.
     /// </summary>
-    public bool Equals(Error other) =>
-        Type == other.Type
-        && string.Equals(Code, other.Code, StringComparison.Ordinal)
-        && string.Equals(Message, other.Message, StringComparison.Ordinal)
-        && MetadataEquals(Metadata, other.Metadata);
+    public string Message
+    {
+        get => _message;
+        init => _message = value ?? throw new ArgumentNullException(nameof(Message));
+    }
+
+    /// <summary>
+    /// Optional context, stored as a read-only copy. Use the <c>WithMetadata</c> extensions to get an
+    /// error with more entries.
+    /// </summary>
+    public IReadOnlyDictionary<string, object>? Metadata
+    {
+        get => _metadata;
+        init => _metadata = Freeze(value);
+    }
+
+    /// <summary>
+    /// Compares the runtime type, error type, code, message and metadata by content. Metadata values
+    /// compare with their own <c>Equals</c>, so a collection stored as a value still compares by reference.
+    /// </summary>
+    public virtual bool Equals(Error? other) =>
+        ReferenceEquals(this, other)
+        || other is not null
+            && EqualityContract == other.EqualityContract
+            && Type == other.Type
+            && string.Equals(Code, other.Code, StringComparison.Ordinal)
+            && string.Equals(Message, other.Message, StringComparison.Ordinal)
+            && MetadataEquals(Metadata, other.Metadata);
 
     /// <summary>
     /// Leaves metadata out, so errors that are equal always share a hash.
@@ -66,11 +83,23 @@ public readonly partial record struct Error
     {
         unchecked
         {
-            var hash = (int)Type;
-            hash = hash * 31 + (Code is null ? 0 : StringComparer.Ordinal.GetHashCode(Code));
-            hash = hash * 31 + (Message is null ? 0 : StringComparer.Ordinal.GetHashCode(Message));
+            var hash = EqualityContract.GetHashCode();
+            hash = hash * 31 + (int)Type;
+            hash = hash * 31 + StringComparer.Ordinal.GetHashCode(Code);
+            hash = hash * 31 + StringComparer.Ordinal.GetHashCode(Message);
             return hash;
         }
+    }
+
+    private static IReadOnlyDictionary<string, object>? Freeze(IReadOnlyDictionary<string, object>? metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+            return null;
+
+        var copy = new Dictionary<string, object>(metadata.Count);
+        foreach (var kvp in metadata)
+            copy[kvp.Key] = kvp.Value;
+        return new ReadOnlyDictionary<string, object>(copy);
     }
 
     private static bool MetadataEquals(IReadOnlyDictionary<string, object>? left, IReadOnlyDictionary<string, object>? right)
@@ -128,5 +157,4 @@ public readonly partial record struct Error
 
         return default;
     }
-
 }

@@ -21,7 +21,7 @@ public class TryGetValueTests
 
         found.Should().BeTrue();
         value.Should().Be(42);
-        error.Should().Be(default(Error));
+        error.Should().BeNull();
     }
 
     [Fact]
@@ -29,10 +29,8 @@ public class TryGetValueTests
     {
         Result<int> result = Error.NotFound("MISSING", "Missing");
 
-        var found = result.TryGetValue(out var value, out var error);
+        var code = result.TryGetValue(out _, out var error) ? null : error.Code;
 
-        found.Should().BeFalse();
-        value.Should().Be(0);
-        error.Code.Should().Be("MISSING");
+        code.Should().Be("MISSING");
     }
 }

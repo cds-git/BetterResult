@@ -65,6 +65,33 @@ public class ZipTests
     }
 
     [Fact]
+    public void Zip_Should_CollectBothErrors_When_BothFail()
+    {
+        var error1 = Error.Validation("E1", "Error 1");
+        var error2 = Error.Validation("E2", "Error 2");
+
+        var zipped = Result<int>.Failure(error1).Zip(Result<string>.Failure(error2));
+
+        zipped.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(error1, error2);
+    }
+
+    [Fact]
+    public async Task ZipAsync_Should_CollectBothErrors_When_BothFail()
+    {
+        var error1 = Error.Validation("E1", "Error 1");
+        var error2 = Error.Validation("E2", "Error 2");
+
+        var zipped = await Task.FromResult(Result<int>.Failure(error1))
+            .ZipAsync(Task.FromResult(Result<int>.Failure(error2)), async (a, b) =>
+            {
+                await Task.Yield();
+                return a + b;
+            });
+
+        zipped.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(error1, error2);
+    }
+
+    [Fact]
     public void ZipWithSelector_Should_ReturnError_When_AnyFails()
     {
         // Arrange

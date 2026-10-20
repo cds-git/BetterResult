@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public readonly partial record struct Error
+public partial record Error
 {
     /// <summary>
     /// An expected failure, such as a broken business rule.

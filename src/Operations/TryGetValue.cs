@@ -8,10 +8,10 @@ public partial record Result<T>
     /// Returns true and the value on success, or false and the error on failure. The side that is not
     /// populated is <c>default</c>.
     /// </summary>
-    public bool TryGetValue([MaybeNullWhen(false)] out T value, out Error error)
+    public bool TryGetValue([MaybeNullWhen(false)] out T value, [NotNullWhen(false)] out Error? error)
     {
         value = IsSuccess ? _value! : default;
-        error = IsFailure ? (Error)_error! : default;
+        error = _error;
         return IsSuccess;
     }
 }

@@ -9,9 +9,9 @@ public static partial class Result
     internal static Error InvokeErrorMapper(Func<Exception, Error> errorMapper, Exception ex)
     {
         var mapped = errorMapper(ex);
-        // A mapper returning default(Error) would throw ArgumentException out of the catch block via
-        // the implicit Error->Result conversion, breaking Try's promise never to throw.
-        return mapped.Code is null ? CreateExceptionError(ex) : mapped;
+        // A mapper returning null would throw out of the catch block via the implicit Error to Result
+        // conversion, breaking Try's promise never to throw.
+        return mapped ?? CreateExceptionError(ex);
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ public static partial class Result
 
     /// <summary>
     /// Runs <paramref name="operation"/> and turns any exception into an error via
-    /// <paramref name="errorMapper"/>. A mapper returning <c>default(Error)</c> falls back to the
+    /// <paramref name="errorMapper"/>. A mapper returning null falls back to the
     /// standard <c>Unexpected</c> error.
     /// </summary>
     public static Result<T> Try<T>(Func<T> operation, Func<Exception, Error> errorMapper)
@@ -133,7 +133,7 @@ public partial record Result<T>
 
     /// <summary>
     /// Runs an operation that may throw and turns any exception into an error via
-    /// <paramref name="errorMapper"/>. If the mapper returns <c>default(Error)</c> the standard
+    /// <paramref name="errorMapper"/>. If the mapper returns null the standard
     /// <c>Unexpected</c> error is used instead, so <c>Try</c> never throws.
     /// </summary>
     public Result<U> Try<U>(Func<T, U> operation, Func<Exception, Error> errorMapper)

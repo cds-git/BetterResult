@@ -525,7 +525,19 @@ var report = await Result.CombineAsync(
 ```
 
 The arguments are evaluated at the call site, so every result is computed before `Combine` sees
-them. It returns the first error it finds and drops the rest.
+them. When any fail, the selector does not run and you get every error at once, as an
+[`ErrorList`](#several-errors-at-once). That is what you want for validation:
+
+```csharp
+Result<User> user = Result.Combine(
+    ValidateName(request.Name),
+    ValidateEmail(request.Email),
+    ValidateAge(request.Age),
+    (name, email, age) => new User(name, email, age));
+// Two invalid fields give one ErrorList holding both
+```
+
+`Zip` collects errors the same way.
 
 ### Zip
 
@@ -555,7 +567,8 @@ Use `Zip` to chain, `Result.Combine` when you have three or more to combine at o
 
 ## Error
 
-A readonly record struct with four members:
+A record with four members. Use a factory for a quick error, or
+[inherit from it](#your-own-error-types) to give a failure its own type and data.
 
 | Member | Description |
 | --- | --- |
@@ -599,9 +612,71 @@ var profile = await FetchProfile(token)
 > **Note:** `ErrorType.Forbidden` sits last in the enum so the numeric values of the older members
 > stay stable for anyone storing or transmitting `ErrorType` as an integer.
 
+### Your own error types
+
+When callers need to tell a failure apart or read its data, give it a type. Inherit from `Error`
+and pass the type, code and message to the base:
+
+```csharp
+public sealed record UserNotFound(int UserId)
+    : Error(ErrorType.NotFound, "USER_NOT_FOUND", $"User {UserId} was not found");
+
+public sealed record EmailTaken(string Email)
+    : Error(ErrorType.Conflict, "EMAIL_TAKEN", $"{Email} is already registered");
+
+public Result<User> GetUser(int id) =>
+    users.Find(id).ToResult(new UserNotFound(id));
+```
+
+Match on the type, read the data with no metadata lookups, and fall back to `Type` for the rest:
+
+```csharp
+IActionResult response = result.Error switch
+{
+    UserNotFound e => NotFound($"No user {e.UserId}"),
+    EmailTaken e => Conflict($"{e.Email} is taken"),
+    { Type: ErrorType.Validation } e => BadRequest(e.Message),
+    var e => Problem(e.Message),
+};
+
+Result<User> user = GetUser(id).Recover(e => e is UserNotFound, _ => User.Guest);
+```
+
+A custom error is still an `Error`, so every operation, `ErrorType` dispatch and the `With`
+extensions work on it unchanged. Use the factories for the many errors that do not need a type of
+their own.
+
+### Several errors at once
+
+`Combine` reports errors together as an `ErrorList`, whose `Errors` holds each one. `Result.Combine`
+and `Zip` do this for you.
+
+```csharp
+Error error = Error.Validation("NAME_REQUIRED", "Name is required")
+    .Combine(Error.Validation("EMAIL_INVALID", "Email is invalid"));
+
+if (error is ErrorList list)
+{
+    foreach (var problem in list.Errors)
+        form.ShowError(problem.Code, problem.Message);
+}
+
+// Every error from a batch, rather than the first. Combine needs at least one error.
+var (_, failures) = rows.Select(ImportRow).Partition();
+if (failures.Count > 0)
+    return failures.Combine();
+```
+
+- The type is the one every error shares, so a set of validation errors is still `Validation` and
+  `Recover(ErrorType.Validation, ...)` or a `switch` on `Type` treats it as one validation failure.
+  Mixed types give `Failure`.
+- The code is `General.Multiple`. Read `Errors` for the details.
+- A single error comes back unchanged, and combining into a list adds to it, so a list never holds
+  another list.
+
 ### Adding context
 
-Every extension returns a new `Error`.
+Every extension returns a new error of the same type, so a custom error keeps its data.
 
 ```csharp
 var error = Error.Failure("E001", "Base error");
@@ -620,9 +695,10 @@ nothing to find.
 
 ### Equality
 
-Errors compare by content: `Type`, `Code`, `Message` and every metadata entry. Two errors built
-separately with the same metadata are equal, whatever order the entries were added in. Metadata
-values compare with their own `Equals`, so a list or array stored as a value compares by reference.
+Errors compare by content: `Type`, `Code`, `Message` and every metadata entry, whatever order the
+entries were added in. A custom error also compares its own properties, and is never equal to a
+plain error with the same code. An `ErrorList` compares its errors in order. Metadata values compare
+with their own `Equals`, so a list or array stored as a value compares by reference.
 
 
 ## Serialization
@@ -640,7 +716,9 @@ ApiResponse<User> response = result.Match(
 ```
 
 `Error` serializes as is. Add `JsonStringEnumConverter` if you want `Type` as a name rather than a
-number. Reading an `Error` back is not supported, so deserialize into your own type there too.
+number. A property typed `Error` writes only the base members, so map custom error data into your
+response explicitly. Reading an `Error` back is not supported, so deserialize into your own type
+there too.
 
 Errors from `Try` carry the exception message. Check that it is safe to show before an error leaves
 your system.

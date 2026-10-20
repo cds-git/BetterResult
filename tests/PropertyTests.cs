@@ -146,14 +146,16 @@ public class PropertyTests
     // -------- Combine --------
 
     [Fact]
-    public void Property_Combine_ReturnsFirstError_InArgOrder()
+    public void Property_Combine_CollectsEveryError_InArgOrder()
     {
-        // For two results where r1 fails, Combine returns r1.Error regardless of r2.
         Gen.Select(ErrorGen, ResultGen).Sample((err1, r2) =>
         {
             var combined = Result.Combine(Result<int>.Failure(err1), r2);
             combined.IsFailure.Should().BeTrue();
-            combined.Error.Should().Be(err1);
+            if (r2.IsSuccess)
+                combined.Error.Should().Be(err1);
+            else
+                combined.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(err1, r2.Error);
         });
     }
 

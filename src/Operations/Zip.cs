@@ -6,14 +6,14 @@ namespace BetterResult;
 public static class ZipExtensions
 {
     /// <summary>
-    /// Combines two results into one holding a tuple of both values, or the first error.
+    /// Combines two results into one holding a tuple of both values, or every error when any fail.
     /// </summary>
     public static Result<(T, TOther)> Zip<T, TOther>(this Result<T> result, Result<TOther> other) =>
         Result.Combine(result, other);
 
     /// <summary>
-    /// Combines two results and feeds both values to <paramref name="selector"/>, or returns the first
-    /// error.
+    /// Combines two results and feeds both values to <paramref name="selector"/>, or returns every
+    /// error when any fail.
     /// </summary>
     public static Result<TResult> Zip<T, TOther, TResult>(this Result<T> result, Result<TOther> other, Func<T, TOther, TResult> selector) =>
         Result.Combine(result, other, selector);
@@ -67,7 +67,7 @@ public static class ZipTaskExtensions
 
     /// <summary>
     /// Combines two results and feeds both values to an async <paramref name="selector"/>, or returns
-    /// the first error.
+    /// every error when any fail.
     /// </summary>
     public static async Task<Result<TResult>> ZipAsync<T, TOther, TResult>(
         this Task<Result<T>> resultTask,
@@ -76,12 +76,7 @@ public static class ZipTaskExtensions
     {
         var result = await resultTask.ConfigureAwait(false);
         var other = await otherTask.ConfigureAwait(false);
-        
-        if (result.IsFailure) return result.Error;
-        if (other.IsFailure) return other.Error;
-        
-        var value = await selector(result.Value, other.Value).ConfigureAwait(false);
-        return value;
+        return await Result.CombineAsync(result, other, selector).ConfigureAwait(false);
     }
 
     /// <inheritdoc cref="ZipAsync{T, TOther, TResult}(Task{Result{T}}, Task{Result{TOther}}, Func{T, TOther, Task{TResult}})"/>
@@ -91,11 +86,6 @@ public static class ZipTaskExtensions
         Func<T, TOther, Task<TResult>> selector)
     {
         var other = await otherTask.ConfigureAwait(false);
-        
-        if (result.IsFailure) return result.Error;
-        if (other.IsFailure) return other.Error;
-        
-        var value = await selector(result.Value, other.Value).ConfigureAwait(false);
-        return value;
+        return await Result.CombineAsync(result, other, selector).ConfigureAwait(false);
     }
 }

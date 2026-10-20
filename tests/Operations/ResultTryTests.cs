@@ -36,9 +36,9 @@ public class ResultTryTests
     }
 
     [Fact]
-    public void Try_Should_UseDefaultError_When_ErrorMapperReturnsDefaultError()
+    public void Try_Should_UseDefaultError_When_ErrorMapperReturnsNull()
     {
-        var result = Result.Try(() => int.Parse("not a number"), _ => default);
+        var result = Result.Try(() => int.Parse("not a number"), _ => null!);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("EXCEPTION");

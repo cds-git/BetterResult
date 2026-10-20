@@ -371,21 +371,73 @@ public class CombineTests
     }
 
     [Fact]
-    public void Combine_Should_ShortCircuitOnFirstError()
+    public void Combine_Should_CollectEveryError_When_SeveralFail()
     {
-        // Arrange
         var error1 = Error.Validation("E1", "First error");
         var error2 = Error.Validation("E2", "Second error");
         var r1 = Result<int>.Success(1);
         var r2 = Result<int>.Failure(error1);
         var r3 = Result<int>.Failure(error2);
 
-        // Act
         var combined = Result.Combine(r1, r2, r3);
 
-        // Assert
         combined.IsFailure.Should().BeTrue();
-        combined.Error.Should().Be(error1); // First error encountered
+        combined.Error.Type.Should().Be(ErrorType.Validation);
+        combined.Error.Code.Should().Be("General.Multiple");
+        combined.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(error1, error2);
+    }
+
+    [Fact]
+    public void Combine_Should_NotRunSelector_When_AnyFails()
+    {
+        var selectorCalled = false;
+
+        var combined = Result.Combine(
+            Result<int>.Failure(Error.Validation("E1", "Error")),
+            Result<int>.Success(2),
+            Result<int>.Failure(Error.Conflict("E2", "Error")),
+            (a, b, c) =>
+            {
+                selectorCalled = true;
+                return a + b + c;
+            });
+
+        combined.IsFailure.Should().BeTrue();
+        combined.Error.Type.Should().Be(ErrorType.Failure);
+        combined.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().HaveCount(2);
+        selectorCalled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Combine8_Should_CollectEveryError_When_AllFail()
+    {
+        var errors = Enumerable.Range(1, 8).Select(i => Error.Validation($"E{i}", "Error")).ToArray();
+
+        var combined = Result.Combine(
+            Result<int>.Failure(errors[0]), Result<int>.Failure(errors[1]),
+            Result<int>.Failure(errors[2]), Result<int>.Failure(errors[3]),
+            Result<int>.Failure(errors[4]), Result<int>.Failure(errors[5]),
+            Result<int>.Failure(errors[6]), Result<int>.Failure(errors[7]));
+
+        combined.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(errors);
+    }
+
+    [Fact]
+    public async Task CombineAsync_Should_CollectEveryError_When_SeveralFail()
+    {
+        var error1 = Error.Validation("E1", "Error");
+        var error2 = Error.Validation("E2", "Error");
+
+        var combined = await Result.CombineAsync(
+            Result<int>.Failure(error1),
+            Result<int>.Failure(error2),
+            async (a, b) =>
+            {
+                await Task.Yield();
+                return a + b;
+            });
+
+        combined.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(error1, error2);
     }
 
     // CombineAsync with async selector tests
