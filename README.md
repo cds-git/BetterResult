@@ -30,6 +30,7 @@ and the compiler keeps you honest about handling it.
   - [Combine](#combine)
   - [Zip](#zip)
 - [Error](#error)
+- [Serialization](#serialization)
 - [Credits](#credits)
 
 ## Installation
@@ -619,9 +620,27 @@ nothing to find.
 
 ### Equality
 
-`Error` uses the default record struct equality, so `Type`, `Code` and `Message` compare by value
-but `Metadata` compares by reference. Two errors built separately with no metadata are equal. Two
-carrying metadata are not, even if you pass the same dictionary to both: the constructor copies it,
-so each error ends up with its own instance. Compare `Type`, `Code` and `Message` directly when you
-want identity.
+Errors compare by content: `Type`, `Code`, `Message` and every metadata entry. Two errors built
+separately with the same metadata are equal, whatever order the entries were added in. Metadata
+values compare with their own `Equals`, so a list or array stored as a value compares by reference.
 
+
+## Serialization
+
+`Result<T>` is not meant to go on the wire as is. System.Text.Json reads every public property, and
+one of `Value` and `Error` always throws, so serializing a result fails. Map it into your own type
+at the boundary instead, which also keeps the contract in your hands:
+
+```csharp
+public record ApiResponse<T>(T? Data, Error? Error);
+
+ApiResponse<User> response = result.Match(
+    user => new ApiResponse<User>(user, null),
+    error => new ApiResponse<User>(default, error));
+```
+
+`Error` serializes as is. Add `JsonStringEnumConverter` if you want `Type` as a name rather than a
+number. Reading an `Error` back is not supported, so deserialize into your own type there too.
+
+Errors from `Try` carry the exception message. Check that it is safe to show before an error leaves
+your system.

@@ -54,8 +54,7 @@ public static class ErrorExtensions
     }
 
     /// <summary>
-    /// Adds or overwrites a single metadata entry. A null value is not stored, but you still get a
-    /// new error with a fresh metadata instance, which will not compare equal to the original.
+    /// Adds or overwrites a single metadata entry. A null value is not stored.
     /// </summary>
     public static Error WithMetadata<T>(this Error error, string key, T? metadata)
     {

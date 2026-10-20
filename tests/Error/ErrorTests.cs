@@ -219,13 +219,69 @@ public class ErrorTests
     [Fact]
     public void Equals_Should_TreatNoMetadataErrorsAsEqual()
     {
-        // Two independently-built errors with no metadata are equal under default record-struct
-        // equality (Metadata is null on both → reference-equal).
         var a = Error.Failure("E001", "msg");
         var b = Error.Failure("E001", "msg");
 
         a.Should().Be(b);
         a.GetHashCode().Should().Be(b.GetHashCode());
+    }
+
+    [Fact]
+    public void Equals_Should_BeTrue_When_SeparatelyBuiltMetadataHasSameContent()
+    {
+        var a = Error.Failure("E001", "msg").WithMetadata("UserId", 42).WithMetadata("Field", "Email");
+        var b = Error.Failure("E001", "msg").WithMetadata("Field", "Email").WithMetadata("UserId", 42);
+
+        a.Should().Be(b);
+        (a == b).Should().BeTrue();
+        a.GetHashCode().Should().Be(b.GetHashCode());
+    }
+
+    [Fact]
+    public void Equals_Should_BeFalse_When_MetadataValueDiffers()
+    {
+        var a = Error.Failure("E001", "msg").WithMetadata("UserId", 42);
+        var b = Error.Failure("E001", "msg").WithMetadata("UserId", 43);
+
+        a.Should().NotBe(b);
+    }
+
+    [Fact]
+    public void Equals_Should_BeFalse_When_MetadataKeysDiffer()
+    {
+        var a = Error.Failure("E001", "msg").WithMetadata("UserId", 42);
+        var b = Error.Failure("E001", "msg").WithMetadata("UserId", 42).WithMetadata("Extra", 1);
+
+        a.Should().NotBe(b);
+        b.Should().NotBe(a);
+    }
+
+    [Fact]
+    public void Equals_Should_BeFalse_When_OnlyOneHasMetadata()
+    {
+        var a = Error.Failure("E001", "msg");
+        var b = Error.Failure("E001", "msg").WithMetadata("UserId", 42);
+
+        a.Should().NotBe(b);
+        b.Should().NotBe(a);
+    }
+
+    [Fact]
+    public void Equals_Should_CompareCollectionValuesByReference()
+    {
+        var a = Error.Failure("E001", "msg").WithMetadata("Ids", new List<int> { 1, 2 });
+        var b = Error.Failure("E001", "msg").WithMetadata("Ids", new List<int> { 1, 2 });
+
+        a.Should().NotBe(b);
+    }
+
+    [Fact]
+    public void Equals_Should_MakeFailedResultsEqual_When_ErrorsHaveSameContent()
+    {
+        Result<int> a = Error.NotFound("E404", "msg").WithMetadata("UserId", 42);
+        Result<int> b = Error.NotFound("E404", "msg").WithMetadata("UserId", 42);
+
+        a.Should().Be(b);
     }
 
     [Fact]

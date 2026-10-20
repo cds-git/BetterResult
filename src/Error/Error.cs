@@ -47,12 +47,47 @@ public readonly partial record struct Error
     /// <summary>
     /// Optional context. Read-only: use the <c>WithMetadata</c> extensions to get a copy with more entries.
     /// </summary>
-    /// <remarks>
-    /// Metadata compares by reference in <see cref="Equals(Error)"/> and <see cref="GetHashCode"/>, not by
-    /// content. Two errors built separately with equivalent metadata are not equal, so compare
-    /// <see cref="Type"/>, <see cref="Code"/>, and <see cref="Message"/> instead.
-    /// </remarks>
     public IReadOnlyDictionary<string, object>? Metadata { get; }
+
+    /// <summary>
+    /// Compares type, code, message and metadata by content. Metadata values compare with their own
+    /// <c>Equals</c>, so a collection stored as a value still compares by reference.
+    /// </summary>
+    public bool Equals(Error other) =>
+        Type == other.Type
+        && string.Equals(Code, other.Code, StringComparison.Ordinal)
+        && string.Equals(Message, other.Message, StringComparison.Ordinal)
+        && MetadataEquals(Metadata, other.Metadata);
+
+    /// <summary>
+    /// Leaves metadata out, so errors that are equal always share a hash.
+    /// </summary>
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            var hash = (int)Type;
+            hash = hash * 31 + (Code is null ? 0 : StringComparer.Ordinal.GetHashCode(Code));
+            hash = hash * 31 + (Message is null ? 0 : StringComparer.Ordinal.GetHashCode(Message));
+            return hash;
+        }
+    }
+
+    private static bool MetadataEquals(IReadOnlyDictionary<string, object>? left, IReadOnlyDictionary<string, object>? right)
+    {
+        if (ReferenceEquals(left, right))
+            return true;
+        if (left is null || right is null || left.Count != right.Count)
+            return false;
+
+        foreach (var entry in left)
+        {
+            if (!right.TryGetValue(entry.Key, out var value) || !Equals(entry.Value, value))
+                return false;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Gets the metadata value for <paramref name="key"/>, or <c>default(T)</c> if there is none.
