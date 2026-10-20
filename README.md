@@ -119,8 +119,17 @@ else
 ```
 
 `Value` throws if the result is a failure and `Error` throws if it is a success, so check
-`IsSuccess` or `IsFailure` first. Most of the time you do not need to: chain the operations below
-and end with `Match`.
+`IsSuccess` or `IsFailure` first. For an early return, `TryGetValue` gives you both sides in one
+call:
+
+```csharp
+if (!GetUser(id).TryGetValue(out var user, out var error))
+    return error;
+
+Console.WriteLine(user.Name);   // the compiler knows user is not null here
+```
+
+Most of the time you do not need either: chain the operations below and end with `Match`.
 
 ```csharp
 string description = CalculateAge(birthDate)
