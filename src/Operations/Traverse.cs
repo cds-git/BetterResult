@@ -40,16 +40,4 @@ public static class TraverseExtensions
         }
         return list.AsReadOnly();
     }
-
-    /// <inheritdoc cref="Traverse{T, U}(IEnumerable{T}, Func{T, Result{U}})"/>
-    public static async Task<Result<IReadOnlyList<U>>> Traverse<T, U>(
-        this Task<IEnumerable<T>> source,
-        Func<T, Result<U>> selector) =>
-            (await source.ConfigureAwait(false)).Traverse(selector);
-
-    /// <inheritdoc cref="Traverse{T, U}(IEnumerable{T}, Func{T, Result{U}})"/>
-    public static async Task<Result<IReadOnlyList<U>>> TraverseAsync<T, U>(
-        this Task<IEnumerable<T>> source,
-        Func<T, Task<Result<U>>> selector) =>
-            await (await source.ConfigureAwait(false)).TraverseAsync(selector).ConfigureAwait(false);
 }

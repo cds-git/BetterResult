@@ -35,14 +35,4 @@ public static class SequenceExtensions
         }
         return list.AsReadOnly();
     }
-
-    /// <inheritdoc cref="Sequence{T}(IEnumerable{Result{T}})"/>
-    public static async Task<Result<IReadOnlyList<T>>> Sequence<T>(
-        this Task<IEnumerable<Result<T>>> source) =>
-            (await source.ConfigureAwait(false)).Sequence();
-
-    /// <inheritdoc cref="Sequence{T}(IEnumerable{Result{T}})"/>
-    public static async Task<Result<IReadOnlyList<T>>> SequenceAsync<T>(
-        this Task<IEnumerable<Task<Result<T>>>> source) =>
-            await (await source.ConfigureAwait(false)).SequenceAsync().ConfigureAwait(false);
 }

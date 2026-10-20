@@ -298,49 +298,7 @@ public class PartitionTests
         return new User { Id = id, Name = $"User{id}" };
     }
 
-    [Fact]
-    public async Task TaskPartition_Should_AwaitAndPartition_When_TaskWrapsResults()
-    {
-        // Arrange
-        var resultsTask = Task.FromResult<IEnumerable<Result<int>>>(new[]
-        {
-            Result<int>.Success(1),
-            Result<int>.Failure(Error.Validation("E1", "Error 1")),
-            Result<int>.Success(2),
-            Result<int>.Failure(Error.Validation("E2", "Error 2")),
-            Result<int>.Success(3)
-        });
 
-        // Act
-        var (successes, failures) = await resultsTask.Partition();
-
-        // Assert
-        successes.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-        failures.Should().HaveCount(2);
-        failures.Select(e => e.Code).Should().BeEquivalentTo(new[] { "E1", "E2" });
-    }
-
-    [Fact]
-    public async Task TaskPartition_Should_EnableFluentChaining()
-    {
-        // Arrange - simulating a pipeline
-        Task<IEnumerable<Result<User>>> GetResultsAsync() =>
-            Task.FromResult<IEnumerable<Result<User>>>(new[]
-            {
-                Result<User>.Success(new User { Id = 1, Name = "Alice" }),
-                Result<User>.Failure(Error.NotFound("NOT_FOUND", "User not found")),
-                Result<User>.Success(new User { Id = 2, Name = "Bob" })
-            });
-
-        // Act - fluent chaining without intermediate await
-        var (successes, failures) = await GetResultsAsync().Partition();
-
-        // Assert
-        successes.Should().HaveCount(2);
-        successes.Select(u => u.Name).Should().BeEquivalentTo(new[] { "Alice", "Bob" });
-        failures.Should().HaveCount(1);
-        failures.First().Code.Should().Be("NOT_FOUND");
-    }
 
     private record User
     {

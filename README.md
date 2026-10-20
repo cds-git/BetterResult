@@ -184,8 +184,8 @@ failure (`TapError`, `MapError`, `Recover`, `Match`) run on exactly the branch y
 
 On naming, use `XAsync` when the callback is async. The operations that hang off a `Result<T>` also
 take `XAsync` when you chain from a `Task<Result<T>>`, so a plain sync lambda still works after
-`await GetUserAsync(id)`. `Zip`, `Sequence`, `Traverse` and `Partition` are the exceptions: they
-keep their plain name when only the source is a task.
+`await GetUserAsync(id)`. `Zip` and `ToResult` are the exceptions: they keep their plain name when
+only the source is a task.
 
 ### Bind
 
@@ -440,13 +440,22 @@ Result<IReadOnlyList<int>> allValid = new[]
     ValidatePhone(user.Phone)
 }.Sequence();
 
+// One at a time: each fetch starts after the previous one finished
 Result<IReadOnlyList<Data>> allData = await urls
     .Select(url => FetchDataAsync(url))
     .SequenceAsync();
+
+// In parallel: start everything, wait for all of it, then sequence
+Result<IReadOnlyList<Data>> allDataParallel =
+    (await Task.WhenAll(urls.Select(url => FetchDataAsync(url)))).Sequence();
 ```
 
 It stops at the first failure and returns that error. Use [`Partition`](#partition) if you need
 every item processed.
+
+`SequenceAsync` awaits the tasks in order and stops at the first failure, so with a lazy `Select`
+the remaining work never starts. Use `Task.WhenAll` when the calls are independent and you want them
+to overlap.
 
 ### Traverse
 
@@ -462,8 +471,8 @@ Result<IReadOnlyList<Product>> products = await productIds
     .TraverseAsync(id => FetchProductAsync(id));
 ```
 
-Also stops at the first failure. Use `Sequence` when you already hold results, `Traverse` when you
-hold the inputs.
+Also stops at the first failure, and `TraverseAsync` runs the selector one item at a time like
+`SequenceAsync`. Use `Sequence` when you already hold results, `Traverse` when you hold the inputs.
 
 ### Partition
 

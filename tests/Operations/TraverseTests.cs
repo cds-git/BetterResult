@@ -288,114 +288,11 @@ public class TraverseTests
         result.Error.Message.Should().Contain("abc");
     }
 
-    [Fact]
-    public async Task Traverse_Should_AcceptTaskWrappedCollection_When_UsingOverload()
-    {
-        // Arrange
-        var collectionTask = Task.FromResult<IEnumerable<int>>(new[] { 1, 2, 3 });
 
-        // Act
-        var result = await collectionTask.Traverse(n => Result<int>.Success(n * 2));
 
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEquivalentTo(new[] { 2, 4, 6 });
-    }
 
-    [Fact]
-    public async Task Traverse_Should_ReturnFirstError_When_TaskWrappedCollectionAndSelectorFails()
-    {
-        // Arrange
-        var collectionTask = Task.FromResult<IEnumerable<int>>(new[] { 1, 2, 3 });
-        var error = Error.Validation("ERROR", "Error at 2");
 
-        // Act
-        var result = await collectionTask.Traverse(n =>
-            n == 2 ? Result<int>.Failure(error) : Result<int>.Success(n * 2));
 
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(error);
-    }
-
-    [Fact]
-    public async Task TraverseAsync_Should_AcceptTaskWrappedCollection_When_UsingOverload()
-    {
-        // Arrange
-        var collectionTask = Task.FromResult<IEnumerable<int>>(new[] { 1, 2, 3 });
-
-        // Act
-        var result = await collectionTask.TraverseAsync(async n =>
-        {
-            await Task.Delay(1);
-            return Result<int>.Success(n * 2);
-        });
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEquivalentTo(new[] { 2, 4, 6 });
-    }
-
-    [Fact]
-    public async Task TraverseAsync_Should_WorkWithAsyncGetter()
-    {
-        // Arrange
-        async Task<IEnumerable<int>> GetListAsync()
-        {
-            await Task.Delay(1);
-            return new[] { 1, 2, 3 };
-        }
-
-        // Act - Task<IEnumerable<T>>.TraverseAsync(Func<T, Task<Result<U>>>)
-        var result = await GetListAsync().TraverseAsync(async id => await GetUserAsync(id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(3);
-        result.Value.Select(u => u.Id).Should().BeEquivalentTo(new[] { 1, 2, 3 });
-    }
-
-    [Fact]
-    public async Task Traverse_Should_WorkWithAsyncGetterAndSyncSelector()
-    {
-        // Arrange
-        async Task<IEnumerable<int>> GetUserIdsAsync()
-        {
-            await Task.Delay(1);
-            return new[] { 1, 2, 3 };
-        }
-
-        // Act - Task<IEnumerable<T>>.Traverse(Func<T, Result<U>>)
-        var result = await GetUserIdsAsync().Traverse(id => GetUser(id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(3);
-    }
-
-    [Fact]
-    public async Task TraverseAsync_Should_WorkInComplexPipeline_WithTaskWrappedCollection()
-    {
-        // Arrange
-        async Task<IEnumerable<string>> FetchDataAsync()
-        {
-            await Task.Delay(1);
-            return new[] { "1", "2", "3" };
-        }
-
-        // Act - complex pipeline with Task-wrapped collection
-        var result = await FetchDataAsync().TraverseAsync(async s =>
-        {
-            await Task.Delay(1);
-            if (int.TryParse(s, out var n))
-                return Result<int>.Success(n);
-            return Error.Validation("PARSE_ERROR", $"Cannot parse '{s}'");
-        });
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-    }
 
     // Helper methods for testing
     private static Result<User> GetUser(int id)

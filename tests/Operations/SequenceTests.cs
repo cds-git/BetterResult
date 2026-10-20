@@ -268,83 +268,9 @@ public class SequenceTests
         return new User { Id = id, Name = $"User{id}" };
     }
 
-    [Fact]
-    public async Task TaskSequence_Should_AwaitAndSequence_When_TaskWrapsResults()
-    {
-        // Arrange
-        var resultsTask = Task.FromResult<IEnumerable<Result<int>>>(new[]
-        {
-            Result<int>.Success(1),
-            Result<int>.Success(2),
-            Result<int>.Success(3)
-        });
 
-        // Act
-        var sequenced = await resultsTask.Sequence();
 
-        // Assert
-        sequenced.IsSuccess.Should().BeTrue();
-        sequenced.Value.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-    }
 
-    [Fact]
-    public async Task TaskSequence_Should_ReturnFirstError_When_TaskWrapsResultsWithFailure()
-    {
-        // Arrange
-        var error = Error.Validation("ERROR", "Error");
-        var resultsTask = Task.FromResult<IEnumerable<Result<int>>>(new[]
-        {
-            Result<int>.Success(1),
-            Result<int>.Failure(error),
-            Result<int>.Success(3)
-        });
-
-        // Act
-        var sequenced = await resultsTask.Sequence();
-
-        // Assert
-        sequenced.IsFailure.Should().BeTrue();
-        sequenced.Error.Should().Be(error);
-    }
-
-    [Fact]
-    public async Task TaskSequenceAsync_Should_AwaitOuterTaskAndSequenceInnerTasks()
-    {
-        // Arrange
-        var tasksTask = Task.FromResult<IEnumerable<Task<Result<int>>>>(new[]
-        {
-            Task.FromResult(Result<int>.Success(1)),
-            Task.FromResult(Result<int>.Success(2)),
-            Task.FromResult(Result<int>.Success(3))
-        });
-
-        // Act
-        var sequenced = await tasksTask.SequenceAsync();
-
-        // Assert
-        sequenced.IsSuccess.Should().BeTrue();
-        sequenced.Value.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-    }
-
-    [Fact]
-    public async Task TaskExtensions_Should_EnableFluentChaining()
-    {
-        // Arrange - simulating a pipeline
-        Task<IEnumerable<Result<int>>> GetResultsAsync() =>
-            Task.FromResult<IEnumerable<Result<int>>>(new[]
-            {
-                Result<int>.Success(1),
-                Result<int>.Success(2),
-                Result<int>.Success(3)
-            });
-
-        // Act - fluent chaining without intermediate await
-        var result = await GetResultsAsync().Sequence();
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(3);
-    }
 
     private record User
     {

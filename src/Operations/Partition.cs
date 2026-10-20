@@ -25,9 +25,4 @@ public static class PartitionExtensions
 
         return (successes.AsReadOnly(), failures.AsReadOnly());
     }
-
-    /// <inheritdoc cref="Partition{T}(IEnumerable{Result{T}})"/>
-    public static async Task<(IReadOnlyList<T> Successes, IReadOnlyList<Error> Failures)> Partition<T>(
-        this Task<IEnumerable<Result<T>>> source) =>
-            (await source.ConfigureAwait(false)).Partition();
 }
