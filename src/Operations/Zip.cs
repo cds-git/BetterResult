@@ -203,3 +203,44 @@ public static class ZipExtensions
     private static Error CollectErrors(params Error?[] errors) =>
         errors.Where(e => e is not null).Select(e => e!).Combine();
 }
+
+/// <summary>
+/// <c>Zip</c> for two results where the first, or both, are still inside a task. Start both tasks before
+/// the call and they run at the same time.
+/// </summary>
+public static class ZipTaskExtensions
+{
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2}(Result{T1}, Result{T2})"/>
+    public static async Task<Result<(T1, T2)>> ZipAsync<T1, T2>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        return first.Zip(second);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, TResult>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Func<T1, T2, TResult> selector)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        return first.Zip(second, selector);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2}(Result{T1}, Result{T2})"/>
+    public static async Task<Result<(T1, T2)>> ZipAsync<T1, T2>(
+        this Task<Result<T1>> firstTask,
+        Result<T2> second) =>
+            (await firstTask.ConfigureAwait(false)).Zip(second);
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, TResult}(Result{T1}, Result{T2}, Func{T1, T2, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, TResult>(
+        this Task<Result<T1>> firstTask,
+        Result<T2> second,
+        Func<T1, T2, TResult> selector) =>
+            (await firstTask.ConfigureAwait(false)).Zip(second, selector);
+}

@@ -577,15 +577,15 @@ Result<User> user = ValidateName(request.Name).Zip(
 // Two invalid fields give one ErrorList holding both
 ```
 
-`Zip` takes results, not tasks. Await them first, and start the tasks together when they can run in
-parallel:
+For two results still inside tasks, `ZipAsync` awaits them. Both tasks start before the call, so the
+two lookups run at the same time:
 
 ```csharp
-var userTask = GetUserAsync(userId);
-var settingsTask = GetSettingsAsync(userId);
-
-Result<Profile> profile = (await userTask).Zip(await settingsTask, (u, s) => new Profile(u, s));
+Result<Profile> profile = await GetUserAsync(userId)
+    .ZipAsync(GetSettingsAsync(userId), (user, settings) => new Profile(user, settings));
 ```
+
+The second can also be a plain result. For three or more tasks, await them first and use `Zip`.
 
 For async work on the combined values, follow with `MapAsync` or `BindAsync`:
 

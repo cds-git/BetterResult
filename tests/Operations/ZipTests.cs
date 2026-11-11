@@ -515,6 +515,51 @@ public class ZipTests
         result.Value.Should().Be(150);
     }
 
+    [Fact]
+    public async Task ZipAsync_Should_ReturnTuple_When_BothTasksSucceed()
+    {
+        var zipped = await Task.FromResult(Result<int>.Success(1)).ZipAsync(Task.FromResult(Result<string>.Success("a")));
+
+        zipped.Value.Should().Be((1, "a"));
+    }
+
+    [Fact]
+    public async Task ZipAsync_Should_ApplySelector_When_BothTasksSucceed()
+    {
+        var zipped = await Task.FromResult(Result<int>.Success(1))
+            .ZipAsync(Task.FromResult(Result<int>.Success(2)), (a, b) => a + b);
+
+        zipped.Value.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task ZipAsync_Should_ReturnTuple_When_SecondIsAResult()
+    {
+        var zipped = await Task.FromResult(Result<int>.Success(1)).ZipAsync(Result<string>.Success("a"));
+
+        zipped.Value.Should().Be((1, "a"));
+    }
+
+    [Fact]
+    public async Task ZipAsync_Should_ApplySelector_When_SecondIsAResult()
+    {
+        var zipped = await Task.FromResult(Result<int>.Success(1)).ZipAsync(Result<int>.Success(2), (a, b) => a + b);
+
+        zipped.Value.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task ZipAsync_Should_CollectBothErrors_When_BothTasksFail()
+    {
+        var error1 = Error.Validation("E1", "Error 1");
+        var error2 = Error.Validation("E2", "Error 2");
+
+        var zipped = await Task.FromResult(Result<int>.Failure(error1))
+            .ZipAsync(Task.FromResult(Result<int>.Failure(error2)), (a, b) => a + b);
+
+        zipped.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(error1, error2);
+    }
+
     private static Result<User> GetUser(int id) =>
         new User { Id = id, Name = $"User{id}" };
 
