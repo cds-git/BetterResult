@@ -6,7 +6,7 @@ namespace BetterResult;
 /// Holds either a value or an <see cref="Error"/>, never both.
 /// </summary>
 /// <typeparam name="T">The type of the underlying <see cref="Value"/>.</typeparam>
-public partial record Result<T>
+public sealed partial record Result<T>
 {
     private readonly T? _value;
     private readonly Error? _error;
@@ -80,7 +80,7 @@ public partial record Result<T>
     /// Prints only the side that is populated. The record-synthesized version reads every property,
     /// and one of <see cref="Value"/> and <see cref="Error"/> always throws.
     /// </summary>
-    protected virtual bool PrintMembers(StringBuilder builder)
+    private bool PrintMembers(StringBuilder builder)
     {
         if (IsFailure)
             builder.Append("IsFailure = True, Error = ").Append(_error);

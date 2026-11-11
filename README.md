@@ -12,6 +12,7 @@ and the compiler keeps you honest about handling it.
 - [Why the Result pattern](#why-the-result-pattern)
 - [Usage](#usage)
   - [Result&lt;T&gt;](#resultt)
+  - [Switching on a result](#switching-on-a-result)
   - [Operations without a return value](#operations-without-a-return-value)
 - [Operations](#operations)
   - [Bind](#bind)
@@ -47,7 +48,7 @@ Or add the reference directly:
 
 Replace `x.x.x` with the latest version on [NuGet](https://www.nuget.org/packages/BetterResult).
 
-Targets `netstandard2.0` and `net10.0`.
+Targets `netstandard2.0`, `net10.0` and `net11.0`.
 
 ## Why the Result pattern
 
@@ -143,6 +144,36 @@ string description = CalculateAge(birthDate)
 > **Note:** `Result<Error>`, where the success type *is* `Error`, cannot use the implicit
 > conversions. Both operators collapse to the same signature and the compiler reports `CS0457`.
 > Use `Result<Error>.Success(...)` and `Result<Error>.Failure(...)` instead.
+
+### Switching on a result
+
+On .NET 11 with C# 15, `Result<T>` is a union of `T` and `Error`. A switch matches the value or
+the error directly, and the compiler checks that both are handled, so no discard arm is needed:
+
+```csharp
+IActionResult response = GetUser(id) switch
+{
+    User user => Ok(user),
+    UserNotFound e => NotFound($"No user {e.UserId}"),
+    Error e => Problem(e.Message),
+};
+
+if (GetUser(id) is User user)
+    Console.WriteLine(user.Name);
+```
+
+Put arms for [your own error types](#your-own-error-types) before the `Error` arm. A value type
+such as `int` is matched without boxing. For a nullable `T`, a success can hold null, so the
+compiler asks for a `null` arm too.
+
+Patterns with a type apply to what the result holds, not to the result. `result is Error` checks for
+a failure and `result is int n` unwraps a success. Two patterns read differently than you might
+expect:
+
+- `result is null` is also true for a success holding null, such as a `Result<string?>`. Use
+  `result == null` to check the reference itself.
+- `result is Result<int>` no longer compiles. Property patterns without a type, such as
+  `result is { IsSuccess: true }`, still apply to the result.
 
 ### Operations without a return value
 
@@ -642,6 +673,29 @@ IActionResult response = result.Error switch
 Result<User> user = GetUser(id).Recover(e => e is UserNotFound, _ => User.Guest);
 ```
 
+On C# 15, a `closed` record keeps a family of errors together, and a switch over it is exhaustive:
+
+```csharp
+public closed record UserError : Error
+{
+    private UserError(ErrorType type, string code, string message) : base(type, code, message) { }
+
+    public sealed record NotFound(int UserId)
+        : UserError(ErrorType.NotFound, "USER_NOT_FOUND", $"User {UserId} was not found");
+
+    public sealed record EmailTaken(string Email)
+        : UserError(ErrorType.Conflict, "EMAIL_TAKEN", $"{Email} is already registered");
+}
+
+string text = userError switch
+{
+    UserError.NotFound e => $"No user {e.UserId}",
+    UserError.EmailTaken e => $"{e.Email} is taken",
+};
+```
+
+A switch on a `Result<T>` still needs an `Error` arm, since any error can reach it.
+
 A custom error is still an `Error`, so every operation, `ErrorType` dispatch and the `With`
 extensions work on it unchanged. Use the factories for the many errors that do not need a type of
 their own.
@@ -703,9 +757,9 @@ with their own `Equals`, so a list or array stored as a value compares by refere
 
 ## Serialization
 
-`Result<T>` is not meant to go on the wire as is. System.Text.Json reads every public property, and
-one of `Value` and `Error` always throws, so serializing a result fails. Map it into your own type
-at the boundary instead, which also keeps the contract in your hands:
+`Result<T>` is not meant to go on the wire as is, and System.Text.Json refuses to serialize it.
+Returning one from an endpoint would otherwise send an error with a success status. Map it into
+your own type at the boundary instead, which also keeps the contract in your hands:
 
 ```csharp
 public record ApiResponse<T>(T? Data, Error? Error);
