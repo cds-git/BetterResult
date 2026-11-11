@@ -13,7 +13,7 @@ public class TapErrorErrorTests
         var r2 = result.TapError(err => Console.WriteLine(err.Message));
 
         // Assert
-        r2.Should().BeSameAs(result);
+        r2.Should().Be(result);
     }
 
 
@@ -28,7 +28,7 @@ public class TapErrorErrorTests
         var r2 = await result.TapErrorAsync((error) => Task.Run(() => Console.WriteLine(error.Message)));
 
         // Assert
-        r2.Should().BeSameAs(result);
+        r2.Should().Be(result);
     }
 
     [Fact]

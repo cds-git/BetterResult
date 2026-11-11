@@ -9,16 +9,16 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Success(42);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = result.TapAlways(r => seen = r);
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.IsSuccess.Should().BeTrue();
+        seen.Should().Be(result);
+        seen.IsSuccess.Should().BeTrue();
         seen.Value.Should().Be(42);
-        r2.Should().BeSameAs(result);
+        r2.Should().Be(result);
     }
 
     [Fact]
@@ -26,16 +26,16 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Failure(TestError);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = result.TapAlways(r => seen = r);
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.IsFailure.Should().BeTrue();
+        seen.Should().Be(result);
+        seen.IsFailure.Should().BeTrue();
         seen.Error.Should().Be(TestError);
-        r2.Should().BeSameAs(result);
+        r2.Should().Be(result);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Success(42);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = await result.TapAlwaysAsync(async r =>
@@ -53,9 +53,9 @@ public class TapAlwaysTests
         });
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.Value.Should().Be(42);
-        r2.Should().BeSameAs(result);
+        seen.Should().Be(result);
+        seen.Value.Should().Be(42);
+        r2.Should().Be(result);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Failure(TestError);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = await result.TapAlwaysAsync(async r =>
@@ -73,9 +73,9 @@ public class TapAlwaysTests
         });
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.Error.Should().Be(TestError);
-        r2.Should().BeSameAs(result);
+        seen.Should().Be(result);
+        seen.Error.Should().Be(TestError);
+        r2.Should().Be(result);
     }
 
     [Fact]
@@ -83,15 +83,15 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Success(42);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = await Task.FromResult(result).TapAlwaysAsync(r => seen = r);
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.Value.Should().Be(42);
-        r2.Should().BeSameAs(result);
+        seen.Should().Be(result);
+        seen.Value.Should().Be(42);
+        r2.Should().Be(result);
     }
 
     [Fact]
@@ -99,15 +99,15 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Failure(TestError);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = await Task.FromResult(result).TapAlwaysAsync(r => seen = r);
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.Error.Should().Be(TestError);
-        r2.Should().BeSameAs(result);
+        seen.Should().Be(result);
+        seen.Error.Should().Be(TestError);
+        r2.Should().Be(result);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Success(42);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = await Task.FromResult(result).TapAlwaysAsync(async r =>
@@ -125,9 +125,9 @@ public class TapAlwaysTests
         });
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.Value.Should().Be(42);
-        r2.Should().BeSameAs(result);
+        seen.Should().Be(result);
+        seen.Value.Should().Be(42);
+        r2.Should().Be(result);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class TapAlwaysTests
     {
         // Arrange
         var result = Result<int>.Failure(TestError);
-        Result<int>? seen = null;
+        Result<int> seen = default;
 
         // Act
         var r2 = await Task.FromResult(result).TapAlwaysAsync(async r =>
@@ -145,9 +145,9 @@ public class TapAlwaysTests
         });
 
         // Assert
-        seen.Should().BeSameAs(result);
-        seen!.Error.Should().Be(TestError);
-        r2.Should().BeSameAs(result);
+        seen.Should().Be(result);
+        seen.Error.Should().Be(TestError);
+        r2.Should().Be(result);
     }
 
     [Fact]

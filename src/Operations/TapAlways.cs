@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public partial record Result<T>
+public readonly partial record struct Result<T>
 {
     /// <summary>
     /// Runs <paramref name="onBoth"/> on either branch, then returns the result unchanged. Use it for

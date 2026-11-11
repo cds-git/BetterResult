@@ -5,6 +5,11 @@ namespace BetterResult;
 /// </summary>
 public static partial class Result
 {
+    internal static readonly Error Uninitialized = Error.Unexpected(
+        "General.Uninitialized", "The result was never set to a value or an error.");
+
+    internal static readonly Error SuccessMarker = Error.Unexpected("General.SuccessMarker", "Never exposed.");
+
     /// <summary>
     /// Creates a successful result with no value. Same as Result&lt;NoValue&gt;.Success(NoValue.Instance).
     /// </summary>

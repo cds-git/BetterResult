@@ -9,7 +9,7 @@ namespace BetterResult;
 /// the value or the error directly and is exhaustive without a discard arm.
 /// </summary>
 [Union]
-public sealed partial record Result<T> : Result<T>.IUnionMembers
+public readonly partial record struct Result<T> : Result<T>.IUnionMembers
 {
     /// <summary>
     /// The union members the compiler uses for conversions and pattern matching. Call the members on
@@ -36,7 +36,7 @@ public sealed partial record Result<T> : Result<T>.IUnionMembers
         bool TryGetValue([MaybeNullWhen(false)] out Error value);
     }
 
-    object? IUnionMembers.Value => IsFailure ? _error : _value;
+    object? IUnionMembers.Value => IsFailure ? Error : _value;
 
     bool IUnionMembers.HasValue => IsFailure || _value is not null;
 
@@ -48,7 +48,7 @@ public sealed partial record Result<T> : Result<T>.IUnionMembers
 
     bool IUnionMembers.TryGetValue([MaybeNullWhen(false)] out Error value)
     {
-        value = _error;
+        value = IsFailure ? Error : null;
         return IsFailure;
     }
 }

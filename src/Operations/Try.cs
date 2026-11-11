@@ -106,7 +106,7 @@ public static partial class Result
         }, errorMapper);
 }
 
-public partial record Result<T>
+public readonly partial record struct Result<T>
 {
     /// <summary>
     /// Runs an operation that may throw and converts any exception into an <c>Unexpected</c> error

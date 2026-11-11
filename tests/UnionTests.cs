@@ -48,6 +48,16 @@ public class UnionTests
     }
 
     [Fact]
+    public void Switch_Should_MatchError_When_ResultIsDefault()
+    {
+        Result<int> result = default;
+
+        var description = Describe(result);
+
+        description.Should().Be("error General.Uninitialized");
+    }
+
+    [Fact]
     public void Switch_Should_MatchNoValue_When_ResultIsSuccess()
     {
         var result = Result.Success();

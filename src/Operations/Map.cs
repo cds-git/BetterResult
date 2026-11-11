@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public partial record Result<T>
+public readonly partial record struct Result<T>
 {
     /// <summary>
     /// Transforms the value with <paramref name="map"/>. A failure passes through untouched and

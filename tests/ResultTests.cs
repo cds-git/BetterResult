@@ -200,4 +200,36 @@ public class ResultTests
         successAct.Should().NotThrow();
         failureAct.Should().NotThrow();
     }
+
+    [Fact]
+    public void Default_Should_BeFailureWithUninitializedError()
+    {
+        Result<string> result = default;
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("General.Uninitialized");
+        result.Error.Type.Should().Be(ErrorType.Unexpected);
+    }
+
+    [Fact]
+    public void Default_Should_ThrowOnValue()
+    {
+        Result<string> result = default;
+
+        var act = () => result.Value;
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Default_Should_ReportUninitializedError_When_Combined()
+    {
+        Result<int> unset = default;
+        Result<int> failed = Error.Validation("BAD", "Bad");
+
+        var combined = unset.Zip(failed);
+
+        combined.Error.Should().BeOfType<ErrorList>()
+            .Which.Errors.Select(e => e.Code).Should().Equal("General.Uninitialized", "BAD");
+    }
 }

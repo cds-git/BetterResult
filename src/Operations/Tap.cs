@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public partial record Result<T>
+public readonly partial record struct Result<T>
 {
     /// <summary>
     /// Runs <paramref name="onSuccess"/> with the value on a success, then returns the result unchanged.

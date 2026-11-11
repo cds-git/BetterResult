@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public partial record Result<T>
+public readonly partial record struct Result<T>
 {
     /// <summary>
     /// Replaces the error with a new one. The result stays a failure; a success passes through untouched.

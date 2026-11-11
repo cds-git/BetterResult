@@ -86,7 +86,8 @@ runtime. Keep exceptions for the genuinely exceptional.
 
 ### `Result<T>`
 
-Holds either a value of type `T` or an `Error`.
+Holds either a value of type `T` or an `Error`. It is a struct, so creating and chaining results
+allocates nothing. A `default` result is a failure with the `General.Uninitialized` error.
 
 ```csharp
 // Implicit conversions
@@ -170,8 +171,7 @@ Patterns with a type apply to what the result holds, not to the result. `result 
 a failure and `result is int n` unwraps a success. Two patterns read differently than you might
 expect:
 
-- `result is null` is also true for a success holding null, such as a `Result<string?>`. Use
-  `result == null` to check the reference itself.
+- `result is null` is true for a success holding null, such as a `Result<string?>`.
 - `result is Result<int>` no longer compiles. Property patterns without a type, such as
   `result is { IsSuccess: true }`, still apply to the result.
 
@@ -396,7 +396,7 @@ Result<int> doubled = GetInput()
 - `OperationCanceledException` and `TaskCanceledException` are not caught, so cooperative
   cancellation keeps working. Wrap the pipeline in your own `try`/`catch` if you want cancellation
   as a Result.
-- If your `errorMapper` returns `default(Error)`, the default mapping is used instead. `Try` never
+- If your `errorMapper` returns null, the default mapping is used instead. `Try` never
   throws.
 
 ### Ensure

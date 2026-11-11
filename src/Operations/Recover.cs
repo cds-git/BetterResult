@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public partial record Result<T>
+public readonly partial record struct Result<T>
 {
     /// <summary>
     /// Turns any failure into whatever <paramref name="recovery"/> returns. A success passes through

@@ -3,19 +3,24 @@ using System.Text;
 namespace BetterResult;
 
 /// <summary>
-/// Holds either a value or an <see cref="Error"/>, never both.
+/// Holds either a value or an <see cref="Error"/>, never both. A <c>default</c> result is a failure
+/// with the <c>General.Uninitialized</c> error.
 /// </summary>
 /// <typeparam name="T">The type of the underlying <see cref="Value"/>.</typeparam>
-public sealed partial record Result<T>
+public readonly partial record struct Result<T>
 {
     private readonly T? _value;
+
+    /// <summary>
+    /// The error, <see cref="Result.SuccessMarker"/> on success, null for <c>default</c>. There is no
+    /// success flag, so a result over a reference type stays 16 bytes and passes in registers.
+    /// </summary>
     private readonly Error? _error;
 
     private Result(T? value)
     {
-        IsFailure = false;
         _value = value;
-        _error = null;
+        _error = Result.SuccessMarker;
     }
 
     private Result(Error error)
@@ -23,7 +28,6 @@ public sealed partial record Result<T>
         if (error is null)
             throw new ArgumentNullException(nameof(error));
 
-        IsFailure = true;
         _value = default;
         _error = error;
     }
@@ -31,19 +35,19 @@ public sealed partial record Result<T>
     /// <summary>
     /// True when the result holds a value.
     /// </summary>
-    public bool IsSuccess => !IsFailure;
+    public bool IsSuccess => ReferenceEquals(_error, Result.SuccessMarker);
 
     /// <summary>
     /// True when the result holds an error.
     /// </summary>
-    public bool IsFailure { get; }
+    public bool IsFailure => !IsSuccess;
 
     /// <summary>
     /// The error. Check <see cref="IsFailure"/> first.
     /// </summary>
     /// <exception cref="InvalidOperationException">The result is a success.</exception>
     public Error Error => IsFailure
-        ? _error!
+        ? _error ?? Result.Uninitialized
         : throw new InvalidOperationException("Cannot access the error when the result is of type success. Check IsFailure before accessing Error!");
 
     /// <summary>
@@ -54,7 +58,7 @@ public sealed partial record Result<T>
         ? throw new InvalidOperationException($"Cannot access the value when result is of type failure. Check IsFailure before accessing value! {Error}")
         : _value!;
 
-    internal Error? ErrorOrNull => _error;
+    internal Error? ErrorOrNull => IsFailure ? Error : null;
 
     /// <summary>
     /// Wraps a value in a successful result.
@@ -83,7 +87,7 @@ public sealed partial record Result<T>
     private bool PrintMembers(StringBuilder builder)
     {
         if (IsFailure)
-            builder.Append("IsFailure = True, Error = ").Append(_error);
+            builder.Append("IsFailure = True, Error = ").Append(Error);
         else
             builder.Append("IsSuccess = True, Value = ").Append(_value);
         return true;

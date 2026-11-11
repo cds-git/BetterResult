@@ -11,6 +11,19 @@ public static class SequenceExtensions
     /// </summary>
     public static Result<IReadOnlyList<T>> Sequence<T>(this IEnumerable<Result<T>> source)
     {
+        if (source is IReadOnlyList<Result<T>> items)
+        {
+            var values = new List<T>(items.Count);
+            for (var i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item.IsFailure)
+                    return item.Error;
+                values.Add(item.Value);
+            }
+            return values.AsReadOnly();
+        }
+
         var list = new List<T>();
         foreach (var result in source)
         {

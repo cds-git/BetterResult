@@ -1,6 +1,6 @@
 namespace BetterResult;
 
-public partial record Result<T>
+public readonly partial record struct Result<T>
 {
     /// <summary>
     /// Fails with <paramref name="error"/> if <paramref name="predicate"/> rejects the value. A failure

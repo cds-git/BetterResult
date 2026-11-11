@@ -14,7 +14,7 @@ public class TapTests
 
         // Assert
         seen.Should().Be(8);
-        r2.Should().BeSameAs(result);
+        r2.Should().Be(result);
     }
 
 
@@ -34,7 +34,7 @@ public class TapTests
 
         // Assert
         isMeaningOfLife.Should().BeTrue();
-        r2.Should().BeSameAs(result);
+        r2.Should().Be(result);
     }
 
     [Fact]
