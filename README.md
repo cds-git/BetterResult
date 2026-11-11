@@ -32,7 +32,6 @@ and the compiler keeps you honest about handling it.
   - [Zip](#zip)
 - [Error](#error)
 - [Serialization](#serialization)
-- [Credits](#credits)
 
 ## Installation
 

@@ -9,10 +9,10 @@
 
   <PropertyGroup>
     <PackageId>BetterResult</PackageId>
-    <Version>3.1.0</Version>
+    <Version>4.0.0</Version>
     <Authors>cds</Authors>
-    <PackageTags>Result,Results,BetterResult,Error,Handling</PackageTags>
-    <Description>Implementation of The Result Pattern</Description>
+    <PackageTags>Result;Error;ErrorHandling;Railway;Functional;Union</PackageTags>
+    <Description>Errors as values for C#. A Result type with your own error types, railway operations, C# 15 union matching and an analyzer that flags discarded results. No dependencies, AOT compatible, netstandard2.0 for Unity.</Description>
     <PackageProjectUrl>https://github.com/cds-git/BetterResult</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
