@@ -25,4 +25,11 @@
     <None Include="../README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../analyzers/BetterResult.Analyzers/BetterResult.Analyzers.csproj"
+                      ReferenceOutputAssembly="false" OutputItemType="Analyzer" PrivateAssets="all" />
+    <None Include="../analyzers/BetterResult.Analyzers/bin/$(Configuration)/netstandard2.0/BetterResult.Analyzers.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
 </Project>

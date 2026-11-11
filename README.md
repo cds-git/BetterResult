@@ -13,6 +13,7 @@ and the compiler keeps you honest about handling it.
 - [Usage](#usage)
   - [Result&lt;T&gt;](#resultt)
   - [Switching on a result](#switching-on-a-result)
+  - [Discarded results](#discarded-results)
   - [Operations without a return value](#operations-without-a-return-value)
 - [Operations](#operations)
   - [Bind](#bind)
@@ -173,6 +174,20 @@ expect:
 - `result is null` is true for a success holding null, such as a `Result<string?>`.
 - `result is Result<int>` no longer compiles. Property patterns without a type, such as
   `result is { IsSuccess: true }`, still apply to the result.
+
+### Discarded results
+
+The package includes an analyzer that warns when a result is dropped, since a dropped result is a
+failure nobody sees:
+
+```csharp
+DeleteUser(id);               // warning BR0001
+await DeleteUserAsync(id);    // warning BR0001
+_ = DeleteUser(id);           // fine, ignored on purpose
+```
+
+It also catches a lambda that drops one, such as `items.ForEach(item => Save(item))`. To make it an
+error, or to turn it off, set `dotnet_diagnostic.BR0001.severity` in `.editorconfig`.
 
 ### Operations without a return value
 
