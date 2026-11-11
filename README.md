@@ -236,6 +236,19 @@ await GetUserAsync(userId)
 
 Each step gets the unwrapped value from the one before. The first failure ends the chain.
 
+When a later step needs an earlier value, pass a selector instead of nesting:
+
+```csharp
+// Nested
+GetUser(id).Bind(user => GetCart(user.Id).Map(cart => new Checkout(user, cart)));
+
+// Flat, the selector gets both values
+GetUser(id).Bind(user => GetCart(user.Id), (user, cart) => new Checkout(user, cart));
+
+await GetUserAsync(id)
+    .BindAsync(user => GetCartAsync(user.Id), (user, cart) => new Checkout(user, cart));
+```
+
 ### Map
 
 Transforms the value with a function that cannot fail.
