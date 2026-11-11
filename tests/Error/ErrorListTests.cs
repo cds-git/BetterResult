@@ -122,7 +122,7 @@ public class ErrorListTests
     {
         Result<int> result = Error.Validation("A", "a").Combine(Error.Validation("B", "b"));
 
-        var recovered = result.Recover(ErrorType.Validation, 0);
+        var recovered = result.Recover(e => e.Type == ErrorType.Validation, _ => 0);
 
         recovered.IsSuccess.Should().BeTrue();
     }

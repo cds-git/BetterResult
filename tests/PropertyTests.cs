@@ -178,20 +178,19 @@ public class PropertyTests
         Gen.Int.Sample(i =>
         {
             var r = Result<int>.Success(i);
-            r.Recover(ErrorType.Failure, _ => Result<int>.Success(-1)).Should().Be(r);
+            r.Recover(_ => Result<int>.Success(-1)).Should().Be(r);
             r.Recover(_ => true, _ => Result<int>.Success(-1)).Should().Be(r);
-            r.Recover(ErrorType.Failure, -1).Should().Be(r);
+            r.Recover<Error>(_ => Result<int>.Success(-1)).Should().Be(r);
         });
     }
 
     [Fact]
     public void Property_Recover_NonMatchingType_PreservesError()
     {
-        // If the actual error type isn't in the recover set, the error passes through.
         Gen.Int.Sample(i =>
         {
             var failed = Result<int>.Failure(Error.Validation("V", $"v{i}"));
-            var recovered = failed.Recover(ErrorType.NotFound, 999);
+            var recovered = failed.Recover(e => e.Type == ErrorType.NotFound, _ => 999);
             recovered.IsFailure.Should().BeTrue();
             recovered.Error.Type.Should().Be(ErrorType.Validation);
         });

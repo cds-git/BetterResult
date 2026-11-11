@@ -428,31 +428,30 @@ Turns a failure back into a success.
 Result<Config> config = LoadConfig()
     .Recover(error => LoadDefaultConfig());
 
-// A single error type, with a fallback value
+// Errors matching a predicate
 Result<User> user = GetUser(userId)
-    .Recover(ErrorType.NotFound, User.Guest);
+    .Recover(e => e.Type == ErrorType.NotFound, _ => User.Guest);
 
-// Several error types, one handler
 Result<Data> data = await FetchDataAsync()
     .RecoverAsync(
-        [ErrorType.Timeout, ErrorType.Unavailable],
-        async error => await FetchFromBackupAsync());
+        e => e.Type is ErrorType.Timeout or ErrorType.Unavailable,
+        async _ => await FetchFromBackupAsync());
 
-// A custom predicate
-Result<Response> response = await SendRequestAsync(request)
-    .RecoverAsync(
-        error => error.Type == ErrorType.Timeout && error.GetMetadata<int>("AttemptNumber") < 3,
-        async error => await RetryRequestAsync(request));
+// One error type, with its data
+Result<User> member = GetUser(userId)
+    .Recover((UserNotFound e) => CreateUser(e.UserId));
 
 // Layered fallbacks
 Result<ImageData> image = LoadHighResImage(imageId)
-    .Recover(ErrorType.NotFound, _ => LoadMediumResImage(imageId))
-    .Recover(ErrorType.NotFound, _ => LoadThumbnail(imageId))
-    .Recover(ErrorType.NotFound, ImageData.Placeholder);
+    .Recover(e => e.Type == ErrorType.NotFound, _ => LoadMediumResImage(imageId))
+    .Recover(e => e.Type == ErrorType.NotFound, _ => LoadThumbnail(imageId))
+    .Recover(e => e.Type == ErrorType.NotFound, _ => ImageData.Placeholder);
 ```
 
-The condition can be omitted, a single `ErrorType`, an `IEnumerable<ErrorType>`, or a
-`Func<Error, bool>`. The recovery itself may return another failure, which is what makes layered
+Without a condition every failure is recovered. A predicate picks errors by anything on them, and a
+typed lambda parameter picks [your own error types](#your-own-error-types) and hands you the
+subtype. `Recover<UserNotFound>(e => ...)` works too, but only on a result, not on a task. The
+recovery may return a plain value or another result, and a failure there is what makes layered
 fallbacks work.
 
 **Recover or MapError?** `MapError` relabels an error and stays a failure. `Recover` handles the
@@ -643,7 +642,7 @@ IActionResult response = result.Error switch
     var e => Problem(e.Message),
 };
 
-Result<User> user = GetUser(id).Recover(e => e is UserNotFound, _ => User.Guest);
+Result<User> user = GetUser(id).Recover((UserNotFound e) => CreateUser(e.UserId));
 ```
 
 On C# 15, a `closed` record keeps a family of errors together, and a switch over it is exhaustive:
@@ -695,7 +694,7 @@ if (failures.Count > 0)
 ```
 
 - The type is the one every error shares, so a set of validation errors is still `Validation` and
-  `Recover(ErrorType.Validation, ...)` or a `switch` on `Type` treats it as one validation failure.
+  a `Recover` or `switch` on `Type` treats it as one validation failure.
   Mixed types give `Failure`.
 - The code is `General.Multiple`. Read `Errors` for the details.
 - A single error comes back unchanged, and combining into a list adds to it, so a list never holds
