@@ -16,10 +16,10 @@ public static class ToResultExtensions
         value is null ? Result<T>.Failure(error) : Result<T>.Success(value.Value);
 
     /// <inheritdoc cref="ToResult{T}(T, Error)"/>
-    public static async Task<Result<T>> ToResult<T>(this Task<T?> value, Error error) where T : class =>
+    public static async Task<Result<T>> ToResultAsync<T>(this Task<T?> value, Error error) where T : class =>
         (await value.ConfigureAwait(false)).ToResult(error);
 
     /// <inheritdoc cref="ToResult{T}(T, Error)"/>
-    public static async Task<Result<T>> ToResult<T>(this Task<T?> value, Error error) where T : struct =>
+    public static async Task<Result<T>> ToResultAsync<T>(this Task<T?> value, Error error) where T : struct =>
         (await value.ConfigureAwait(false)).ToResult(error);
 }

@@ -21,11 +21,6 @@ public static partial class Result
     public static Result<T> Success<T>(T value) => Result<T>.Success(value);
 
     /// <summary>
-    /// Creates a failed result holding <paramref name="error"/>.
-    /// </summary>
-    public static Result<T> Failure<T>(Error error) => Result<T>.Failure(error);
-
-    /// <summary>
     /// Succeeds with <paramref name="value"/> when <paramref name="condition"/> is true, otherwise fails with <paramref name="error"/>.
     /// </summary>
     public static Result<T> SuccessIf<T>(bool condition, T value, Error error) =>

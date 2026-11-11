@@ -49,46 +49,46 @@ public class ToResultTests
     }
 
     [Fact]
-    public async Task ToResult_Should_ReturnValue_When_TaskReferenceIsNotNull()
+    public async Task ToResultAsync_Should_ReturnValue_When_ReferenceIsNotNull()
     {
-        Result<User> result = await FindUserAsync(1).ToResult(Missing);
+        Result<User> result = await FindUserAsync(1).ToResultAsync(Missing);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(1);
     }
 
     [Fact]
-    public async Task ToResult_Should_ReturnError_When_TaskReferenceIsNull()
+    public async Task ToResultAsync_Should_ReturnError_When_ReferenceIsNull()
     {
-        var result = await FindUserAsync(999).ToResult(Missing);
+        var result = await FindUserAsync(999).ToResultAsync(Missing);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("MISSING");
     }
 
     [Fact]
-    public async Task ToResult_Should_ReturnUnwrappedValue_When_TaskNullableStructHasValue()
+    public async Task ToResultAsync_Should_ReturnUnwrappedValue_When_NullableStructHasValue()
     {
-        Result<int> result = await FindAgeAsync(1).ToResult(Missing);
+        Result<int> result = await FindAgeAsync(1).ToResultAsync(Missing);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(30);
     }
 
     [Fact]
-    public async Task ToResult_Should_ReturnError_When_TaskNullableStructIsNull()
+    public async Task ToResultAsync_Should_ReturnError_When_NullableStructIsNull()
     {
-        var result = await FindAgeAsync(999).ToResult(Missing);
+        var result = await FindAgeAsync(999).ToResultAsync(Missing);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("MISSING");
     }
 
     [Fact]
-    public async Task ToResult_Should_JoinPipeline_When_TaskReferenceIsNotNull()
+    public async Task ToResultAsync_Should_JoinPipeline_When_ReferenceIsNotNull()
     {
         var result = await FindUserAsync(1)
-            .ToResult(Missing)
+            .ToResultAsync(Missing)
             .MapAsync(user => user.Name);
 
         result.IsSuccess.Should().BeTrue();

@@ -96,14 +96,14 @@ Result<int> failure = Error.Failure("E001", "Invalid input");
 
 // Explicit factories
 Result<int> explicitSuccess = Result.Success(100);
-Result<int> explicitFailure = Result.Failure<int>(Error.NotFound("E404", "User not found"));
+Result<int> explicitFailure = Result<int>.Failure(Error.NotFound("E404", "User not found"));
 
 // From a condition
 Result<Order> order = Result.SuccessIf(cart.Items.Any(), cart.ToOrder(), Error.Validation("EMPTY_CART", "Cart is empty"));
 Result<NoValue> allowed = Result.FailureIf(user.IsLocked, Error.Forbidden("LOCKED", "Account is locked"));
 
 // From a nullable, null becomes the error
-Result<User> user = await repository.FindAsync(id).ToResult(Error.NotFound("USER_NOT_FOUND", "No such user"));
+Result<User> user = await repository.FindAsync(id).ToResultAsync(Error.NotFound("USER_NOT_FOUND", "No such user"));
 Result<int> port = config.Port.ToResult(Error.Validation("NO_PORT", "Port is not configured"));
 ```
 
@@ -228,10 +228,9 @@ skipped and the error falls through to the end of the chain. The ones that exist
 failure (`TapError`, `MapError`, `Recover`, `Match`) run on exactly the branch you would expect, and
 `TapAlways` runs on both.
 
-On naming, use `XAsync` when the callback is async. The operations that hang off a `Result<T>` also
-take `XAsync` when you chain from a `Task<Result<T>>`, so a plain sync lambda still works after
-`await GetUserAsync(id)`. `Zip` and `ToResult` are the exceptions: they keep their plain name when
-only the source is a task.
+On naming, a method ends in `Async` exactly when it returns a task. That covers an async callback
+and chaining from a `Task<Result<T>>`, so a plain sync lambda still works after `GetUserAsync(id)`
+with `MapAsync`, `BindAsync` and the rest.
 
 ### Bind
 
