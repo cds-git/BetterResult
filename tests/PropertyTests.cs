@@ -143,14 +143,14 @@ public class PropertyTests
         });
     }
 
-    // -------- Combine --------
+    // -------- Zip --------
 
     [Fact]
-    public void Property_Combine_CollectsEveryError_InArgOrder()
+    public void Property_Zip_CollectsEveryError_InArgOrder()
     {
         Gen.Select(ErrorGen, ResultGen).Sample((err1, r2) =>
         {
-            var combined = Result.Combine(Result<int>.Failure(err1), r2);
+            var combined = Result<int>.Failure(err1).Zip(r2);
             combined.IsFailure.Should().BeTrue();
             if (r2.IsSuccess)
                 combined.Error.Should().Be(err1);
@@ -160,11 +160,11 @@ public class PropertyTests
     }
 
     [Fact]
-    public void Property_Combine_AllSuccess_ProducesTuple()
+    public void Property_Zip_AllSuccess_ProducesTuple()
     {
         Gen.Select(Gen.Int, Gen.Int).Sample((a, b) =>
         {
-            var combined = Result.Combine(Result<int>.Success(a), Result<int>.Success(b));
+            var combined = Result<int>.Success(a).Zip(Result<int>.Success(b));
             combined.IsSuccess.Should().BeTrue();
             combined.Value.Should().Be((a, b));
         });

@@ -28,7 +28,6 @@ and the compiler keeps you honest about handling it.
   - [Sequence](#sequence)
   - [Traverse](#traverse)
   - [Partition](#partition)
-  - [Combine](#combine)
   - [Zip](#zip)
 - [Error](#error)
 - [Serialization](#serialization)
@@ -208,8 +207,8 @@ string outcome = await ValidatePermissionsAsync(currentUser, targetUserId)  // T
 
 ## Operations
 
-Every operation has sync and async variants. The ones that work on the value (`Bind`, `Map`, `Tap`,
-`Ensure`, `Try`, `Zip`, `Combine`) short-circuit: once a result is a failure their callback is
+Most operations have sync and async variants. The ones that work on the value (`Bind`, `Map`, `Tap`,
+`Ensure`, `Try`, `Zip`) short-circuit: once a result is a failure their callback is
 skipped and the error falls through to the end of the chain. The ones that exist to deal with
 failure (`TapError`, `MapError`, `Recover`, `Match`) run on exactly the branch you would expect, and
 `TapAlways` runs on both.
@@ -526,75 +525,49 @@ Returns `(IReadOnlyList<T> Successes, IReadOnlyList<Error> Failures)`. Unlike `S
 `Traverse` it never short-circuits, so use it for bulk imports, batch jobs, and anywhere partial
 success is a real outcome.
 
-### Combine
+### Zip
 
 Combines 2 to 8 independent results, with or without a selector.
 
 ```csharp
 // Without a selector you get a tuple
-Result<(User, Settings)> combined = Result.Combine(GetUser(userId), GetSettings(userId));
+Result<(User, Settings)> combined = GetUser(userId).Zip(GetSettings(userId));
 
 // With one, the values go straight into it
-Result<Dashboard> dashboard = Result.Combine(
-    GetUser(userId),
+Result<Dashboard> dashboard = GetUser(userId).Zip(
     GetSettings(userId),
     GetPermissions(userId),
     (u, s, p) => new Dashboard(u, s, p));
-
-// Parallel work: start the tasks first, then combine
-var userTask = GetUserAsync(userId);
-var settingsTask = GetSettingsAsync(userId);
-await Task.WhenAll(userTask, settingsTask);
-
-var profile = Result.Combine(await userTask, await settingsTask, (u, s) => new Profile(u, s));
-
-// CombineAsync takes an async selector
-var report = await Result.CombineAsync(
-    FetchSalesData(),
-    FetchInventoryData(),
-    async (sales, inventory) => await BuildReportAsync(sales, inventory));
 ```
 
-The arguments are evaluated at the call site, so every result is computed before `Combine` sees
-them. When any fail, the selector does not run and you get every error at once, as an
+The arguments are evaluated at the call site, so every result is computed before `Zip` sees them.
+When any fail, the selector does not run and you get every error at once, as an
 [`ErrorList`](#several-errors-at-once). That is what you want for validation:
 
 ```csharp
-Result<User> user = Result.Combine(
-    ValidateName(request.Name),
+Result<User> user = ValidateName(request.Name).Zip(
     ValidateEmail(request.Email),
     ValidateAge(request.Age),
     (name, email, age) => new User(name, email, age));
 // Two invalid fields give one ErrorList holding both
 ```
 
-`Zip` collects errors the same way.
-
-### Zip
-
-`Combine` for two results, in fluent form.
+`Zip` takes results, not tasks. Await them first, and start the tasks together when they can run in
+parallel:
 
 ```csharp
-var profile = GetUser(userId)
-    .Zip(GetSettings(userId), (user, settings) => new Profile(user, settings));
+var userTask = GetUserAsync(userId);
+var settingsTask = GetSettingsAsync(userId);
 
-// Chain to build up progressively
-var dashboard = GetUser(userId)
-    .Zip(GetSettings(userId), (u, s) => (User: u, Settings: s))
-    .Zip(GetPermissions(userId), (us, p) => new Dashboard(us.User, us.Settings, p));
-
-// Without a selector you get a tuple
-Result<(string, string)> name = GetFirstName().Zip(GetLastName());
-
-var result = await GetUserAsync(userId)
-    .ZipAsync(GetSettingsAsync(userId), async (u, s) =>
-    {
-        await LogProfileCreation(u.Id);
-        return new Profile(u, s);
-    });
+Result<Profile> profile = (await userTask).Zip(await settingsTask, (u, s) => new Profile(u, s));
 ```
 
-Use `Zip` to chain, `Result.Combine` when you have three or more to combine at once.
+For async work on the combined values, follow with `MapAsync` or `BindAsync`:
+
+```csharp
+Result<Report> report = await sales.Zip(inventory)
+    .MapAsync(pair => BuildReportAsync(pair.Item1, pair.Item2));
+```
 
 ## Error
 
@@ -702,8 +675,8 @@ their own.
 
 ### Several errors at once
 
-`Combine` reports errors together as an `ErrorList`, whose `Errors` holds each one. `Result.Combine`
-and `Zip` do this for you.
+`Combine` reports errors together as an `ErrorList`, whose `Errors` holds each one. `Zip` does this
+for you.
 
 ```csharp
 Error error = Error.Validation("NAME_REQUIRED", "Name is required")
