@@ -560,6 +560,56 @@ public class ZipTests
         zipped.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(error1, error2);
     }
 
+    [Fact]
+    public async Task ZipAsync3_Should_ReturnTuple_When_AllTasksSucceed()
+    {
+        var zipped = await Task.FromResult(Result<int>.Success(1))
+            .ZipAsync(Task.FromResult(Result<string>.Success("a")), Task.FromResult(Result<bool>.Success(true)));
+
+        zipped.Value.Should().Be((1, "a", true));
+    }
+
+    [Fact]
+    public async Task ZipAsync3_Should_ApplySelector_When_AllTasksSucceed()
+    {
+        var zipped = await Task.FromResult(Result<int>.Success(1))
+            .ZipAsync(Task.FromResult(Result<int>.Success(2)), Task.FromResult(Result<int>.Success(3)), (a, b, c) => a + b + c);
+
+        zipped.Value.Should().Be(6);
+    }
+
+    [Fact]
+    public async Task ZipAsync8_Should_ReturnTuple_When_AllTasksSucceed()
+    {
+        var t = Enumerable.Range(1, 8).Select(i => Task.FromResult(Result<int>.Success(i))).ToArray();
+
+        var zipped = await t[0].ZipAsync(t[1], t[2], t[3], t[4], t[5], t[6], t[7]);
+
+        zipped.Value.Should().Be((1, 2, 3, 4, 5, 6, 7, 8));
+    }
+
+    [Fact]
+    public async Task ZipAsync8_Should_ApplySelector_When_AllTasksSucceed()
+    {
+        var t = Enumerable.Range(1, 8).Select(i => Task.FromResult(Result<int>.Success(i))).ToArray();
+
+        var zipped = await t[0].ZipAsync(t[1], t[2], t[3], t[4], t[5], t[6], t[7],
+            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h);
+
+        zipped.Value.Should().Be(36);
+    }
+
+    [Fact]
+    public async Task ZipAsync8_Should_CollectEveryError_When_AllTasksFail()
+    {
+        var errors = Enumerable.Range(1, 8).Select(i => Error.Validation($"E{i}", "Error")).ToArray();
+        var t = errors.Select(e => Task.FromResult(Result<int>.Failure(e))).ToArray();
+
+        var zipped = await t[0].ZipAsync(t[1], t[2], t[3], t[4], t[5], t[6], t[7]);
+
+        zipped.Error.Should().BeOfType<ErrorList>().Which.Errors.Should().Equal(errors);
+    }
+
     private static Result<User> GetUser(int id) =>
         new User { Id = id, Name = $"User{id}" };
 

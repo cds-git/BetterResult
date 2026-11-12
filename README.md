@@ -585,7 +585,8 @@ Result<Profile> profile = await GetUserAsync(userId)
     .ZipAsync(GetSettingsAsync(userId), (user, settings) => new Profile(user, settings));
 ```
 
-The second can also be a plain result. For three or more tasks, await them first and use `Zip`.
+`ZipAsync` takes 2 to 8 tasks, like `Zip` takes 2 to 8 results. With two, the second can also be a
+plain result. To mix tasks and results beyond that, await the tasks first and use `Zip`.
 
 For async work on the combined values, follow with `MapAsync` or `BindAsync`:
 

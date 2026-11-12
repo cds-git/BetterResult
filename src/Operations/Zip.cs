@@ -205,8 +205,8 @@ public static class ZipExtensions
 }
 
 /// <summary>
-/// <c>Zip</c> for two results where the first, or both, are still inside a task. Start both tasks before
-/// the call and they run at the same time.
+/// <c>Zip</c> for results still inside tasks, 2 to 8 of them. The tasks are awaited in turn, so start
+/// them all before the call and they run at the same time. For two, the second can also be a result.
 /// </summary>
 public static class ZipTaskExtensions
 {
@@ -243,4 +243,209 @@ public static class ZipTaskExtensions
         Result<T2> second,
         Func<T1, T2, TResult> selector) =>
             (await firstTask.ConfigureAwait(false)).Zip(second, selector);
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3}(Result{T1}, Result{T2}, Result{T3})"/>
+    public static async Task<Result<(T1, T2, T3)>> ZipAsync<T1, T2, T3>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        return first.Zip(second, third);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, TResult}(Result{T1}, Result{T2}, Result{T3}, Func{T1, T2, T3, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, T3, TResult>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Func<T1, T2, T3, TResult> selector)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        return first.Zip(second, third, selector);
+    }
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4}(Result{T1}, Result{T2}, Result{T3}, Result{T4})"/>
+    public static async Task<Result<(T1, T2, T3, T4)>> ZipAsync<T1, T2, T3, T4>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, TResult}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Func{T1, T2, T3, T4, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, T3, T4, TResult>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Func<T1, T2, T3, T4, TResult> selector)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, selector);
+    }
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5})"/>
+    public static async Task<Result<(T1, T2, T3, T4, T5)>> ZipAsync<T1, T2, T3, T4, T5>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5, TResult}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5}, Func{T1, T2, T3, T4, T5, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, T3, T4, T5, TResult>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask,
+        Func<T1, T2, T3, T4, T5, TResult> selector)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth, selector);
+    }
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5, T6}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5}, Result{T6})"/>
+    public static async Task<Result<(T1, T2, T3, T4, T5, T6)>> ZipAsync<T1, T2, T3, T4, T5, T6>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask,
+        Task<Result<T6>> sixthTask)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        var sixth = await sixthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth, sixth);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5, T6, TResult}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5}, Result{T6}, Func{T1, T2, T3, T4, T5, T6, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, T3, T4, T5, T6, TResult>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask,
+        Task<Result<T6>> sixthTask,
+        Func<T1, T2, T3, T4, T5, T6, TResult> selector)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        var sixth = await sixthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth, sixth, selector);
+    }
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5, T6, T7}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5}, Result{T6}, Result{T7})"/>
+    public static async Task<Result<(T1, T2, T3, T4, T5, T6, T7)>> ZipAsync<T1, T2, T3, T4, T5, T6, T7>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask,
+        Task<Result<T6>> sixthTask,
+        Task<Result<T7>> seventhTask)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        var sixth = await sixthTask.ConfigureAwait(false);
+        var seventh = await seventhTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth, sixth, seventh);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5, T6, T7, TResult}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5}, Result{T6}, Result{T7}, Func{T1, T2, T3, T4, T5, T6, T7, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, T3, T4, T5, T6, T7, TResult>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask,
+        Task<Result<T6>> sixthTask,
+        Task<Result<T7>> seventhTask,
+        Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        var sixth = await sixthTask.ConfigureAwait(false);
+        var seventh = await seventhTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth, sixth, seventh, selector);
+    }
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5, T6, T7, T8}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5}, Result{T6}, Result{T7}, Result{T8})"/>
+    public static async Task<Result<(T1, T2, T3, T4, T5, T6, T7, T8)>> ZipAsync<T1, T2, T3, T4, T5, T6, T7, T8>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask,
+        Task<Result<T6>> sixthTask,
+        Task<Result<T7>> seventhTask,
+        Task<Result<T8>> eighthTask)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        var sixth = await sixthTask.ConfigureAwait(false);
+        var seventh = await seventhTask.ConfigureAwait(false);
+        var eighth = await eighthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth, sixth, seventh, eighth);
+    }
+
+    /// <inheritdoc cref="ZipExtensions.Zip{T1, T2, T3, T4, T5, T6, T7, T8, TResult}(Result{T1}, Result{T2}, Result{T3}, Result{T4}, Result{T5}, Result{T6}, Result{T7}, Result{T8}, Func{T1, T2, T3, T4, T5, T6, T7, T8, TResult})"/>
+    public static async Task<Result<TResult>> ZipAsync<T1, T2, T3, T4, T5, T6, T7, T8, TResult>(
+        this Task<Result<T1>> firstTask,
+        Task<Result<T2>> secondTask,
+        Task<Result<T3>> thirdTask,
+        Task<Result<T4>> fourthTask,
+        Task<Result<T5>> fifthTask,
+        Task<Result<T6>> sixthTask,
+        Task<Result<T7>> seventhTask,
+        Task<Result<T8>> eighthTask,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector)
+    {
+        var first = await firstTask.ConfigureAwait(false);
+        var second = await secondTask.ConfigureAwait(false);
+        var third = await thirdTask.ConfigureAwait(false);
+        var fourth = await fourthTask.ConfigureAwait(false);
+        var fifth = await fifthTask.ConfigureAwait(false);
+        var sixth = await sixthTask.ConfigureAwait(false);
+        var seventh = await seventhTask.ConfigureAwait(false);
+        var eighth = await eighthTask.ConfigureAwait(false);
+        return first.Zip(second, third, fourth, fifth, sixth, seventh, eighth, selector);
+    }
 }
