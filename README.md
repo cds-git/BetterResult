@@ -764,7 +764,8 @@ with their own `Equals`, so a list or array stored as a value compares by refere
 ## Serialization
 
 `Result<T>` is not meant to go on the wire as is, and System.Text.Json refuses to serialize it.
-Returning one from an endpoint would otherwise send an error with a success status. Map it into
+Returning one from an endpoint would otherwise send an error with a success status. On .NET 11 you
+get a `NotSupportedException` that says so, from the one endpoint or call that tried. Map it into
 your own type at the boundary instead, which also keeps the contract in your hands:
 
 ```csharp
