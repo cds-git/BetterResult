@@ -602,7 +602,7 @@ A record with four members. Use a factory for a quick error, or
 
 | Member | Description |
 | --- | --- |
-| `ErrorType Type` | The category. Drives `Recover`'s error-type overloads. |
+| `ErrorType Type` | The category, for a `Recover` predicate or a `switch`. |
 | `string Code` | Your code for the failure, such as an HTTP status or a localization key. |
 | `string Message` | The description. |
 | `IReadOnlyDictionary<string, object>? Metadata` | Optional context, or `null`. |
@@ -636,7 +636,7 @@ Easy to mix up, and worth getting right because `Recover` dispatches on `ErrorTy
 // Only a real authentication failure triggers a token refresh.
 // A Forbidden error flows straight through instead of retrying pointlessly.
 var profile = await FetchProfile(token)
-    .RecoverAsync(ErrorType.Unauthorized, _ => RefreshTokenAndRetry());
+    .RecoverAsync(e => e.Type == ErrorType.Unauthorized, _ => RefreshTokenAndRetry());
 ```
 
 > **Note:** `ErrorType.Forbidden` sits last in the enum so the numeric values of the older members
@@ -672,14 +672,15 @@ IActionResult response = result.Error switch
 Result<User> user = GetUser(id).Recover((UserNotFound e) => CreateUser(e.UserId));
 ```
 
-On C# 15, a `closed` record keeps a family of errors together, and a switch over it is exhaustive:
+On .NET 11 with C# 15, a `closed` record keeps a family of errors together, and a switch over it
+is exhaustive:
 
 ```csharp
 public closed record UserError : Error
 {
     private UserError(ErrorType type, string code, string message) : base(type, code, message) { }
 
-    public sealed record NotFound(int UserId)
+    public new sealed record NotFound(int UserId)
         : UserError(ErrorType.NotFound, "USER_NOT_FOUND", $"User {UserId} was not found");
 
     public sealed record EmailTaken(string Email)
@@ -693,7 +694,13 @@ string text = userError switch
 };
 ```
 
-A switch on a `Result<T>` still needs an `Error` arm, since any error can reach it.
+The `new` is needed because a nested `NotFound` hides the `Error.NotFound` factory, which is a
+CS0108 warning otherwise. The same goes for a case named after any other factory, such as
+`Conflict` or `Validation`.
+
+A switch on a `Result<T>` still needs an `Error` arm, since any error can reach it. A `closed`
+value type is exhaustive inside a result too, so `Result<Shape>` needs one arm per shape and one
+for `Error`.
 
 A custom error is still an `Error`, so every operation, `ErrorType` dispatch and the `With`
 extensions work on it unchanged. Use the factories for the many errors that do not need a type of

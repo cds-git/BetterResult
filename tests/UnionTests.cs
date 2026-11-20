@@ -6,6 +6,24 @@ public class UnionTests
     private sealed record UserNotFound(int UserId)
         : Error(ErrorType.NotFound, "USER_NOT_FOUND", $"User {UserId} was not found");
 
+    private closed record Shape
+    {
+        public sealed record Circle(double Radius) : Shape;
+
+        public sealed record Square(double Side) : Shape;
+    }
+
+    private closed record UserError : Error
+    {
+        private UserError(ErrorType type, string code, string message) : base(type, code, message) { }
+
+        public sealed record Missing(int UserId)
+            : UserError(ErrorType.NotFound, "USER_NOT_FOUND", $"User {UserId} was not found");
+
+        public sealed record EmailTaken(string Email)
+            : UserError(ErrorType.Conflict, "EMAIL_TAKEN", $"{Email} is already registered");
+    }
+
     private static string Describe(Result<int> result) => result switch
     {
         int value => $"value {value}",
@@ -114,6 +132,37 @@ public class UnionTests
         var matched = result is { IsSuccess: true };
 
         matched.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Switch_Should_BeExhaustive_When_ValueIsClosedHierarchy()
+    {
+        Result<Shape> result = new Shape.Square(2);
+
+        var description = result switch
+        {
+            Shape.Circle c => $"circle {c.Radius}",
+            Shape.Square s => $"square {s.Side}",
+            Error e => e.Code,
+        };
+
+        description.Should().Be("square 2");
+    }
+
+    [Fact]
+    public void Switch_Should_MatchClosedErrorFamily_When_ArmsComeBeforeError()
+    {
+        Result<int> result = new UserError.Missing(7);
+
+        var description = result switch
+        {
+            int value => $"value {value}",
+            UserError.Missing e => $"no user {e.UserId}",
+            UserError.EmailTaken e => $"{e.Email} is taken",
+            Error e => e.Code,
+        };
+
+        description.Should().Be("no user 7");
     }
 
     [Fact]
