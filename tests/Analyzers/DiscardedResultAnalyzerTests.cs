@@ -55,7 +55,38 @@ public class DiscardedResultAnalyzerTests
         diagnostics.Should().BeEmpty();
     }
 
-    private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string statement)
+    [Theory]
+    [InlineData("store.Received(1).Save();")]
+    [InlineData("await store.Received().SaveAsync();")]
+    [InlineData("store.DidNotReceive().Save();")]
+    [InlineData("Verification.Received(store).Save();")]
+    public async Task Analyzer_Should_NotWarn_When_TheReceiverComesFromAnIgnoredMethod(string statement)
+    {
+        var diagnostics = await AnalyzeAsync(statement, ignoredReceiverMethods: "Received, DidNotReceive");
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("store.Save();")]
+    [InlineData("store.Check().Save();")]
+    [InlineData("store.Received().Save().Map(x => x + 1);")]
+    public async Task Analyzer_Should_Warn_When_TheReceiverIsNotFromAnIgnoredMethod(string statement)
+    {
+        var diagnostics = await AnalyzeAsync(statement, ignoredReceiverMethods: "Received");
+
+        diagnostics.Should().ContainSingle().Which.Id.Should().Be("BR0001");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Warn_When_NoReceiverMethodIsIgnored()
+    {
+        var diagnostics = await AnalyzeAsync("store.Received(1).Save();");
+
+        diagnostics.Should().ContainSingle().Which.Id.Should().Be("BR0001");
+    }
+
+    private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string statement, string? ignoredReceiverMethods = null)
     {
         var source = $$"""
             using System;
@@ -71,10 +102,23 @@ public class DiscardedResultAnalyzerTests
                 Subject? Other => null;
                 Result<int> Instance() => 1;
 
-                async Task Run()
+                async Task Run(IStore store)
                 {
                     {{statement}}
                 }
+            }
+
+            public interface IStore
+            {
+                Result<int> Save();
+                Task<Result<int>> SaveAsync();
+            }
+
+            public static class Verification
+            {
+                public static T Received<T>(this T substitute, int count = 1) => substitute;
+                public static T DidNotReceive<T>(this T substitute) => substitute;
+                public static T Check<T>(this T substitute) => substitute;
             }
             """;
 
@@ -92,8 +136,29 @@ public class DiscardedResultAnalyzerTests
             .Where(d => d.Severity == DiagnosticSeverity.Error)
             .Should().BeEmpty();
 
+        var config = ignoredReceiverMethods is null
+            ? []
+            : new Dictionary<string, string> { [DiscardedResultAnalyzer.IgnoredReceiverMethodsKey] = ignoredReceiverMethods };
+
         return await compilation
-            .WithAnalyzers([new DiscardedResultAnalyzer()])
+            .WithAnalyzers([new DiscardedResultAnalyzer()], new AnalyzerOptions([], new ConfigOptionsProvider(config)))
             .GetAnalyzerDiagnosticsAsync(TestContext.Current.CancellationToken);
+    }
+
+    private sealed class ConfigOptionsProvider(Dictionary<string, string> values) : AnalyzerConfigOptionsProvider
+    {
+        private readonly ConfigOptions _options = new(values);
+
+        public override AnalyzerConfigOptions GlobalOptions => _options;
+
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => _options;
+
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => _options;
+    }
+
+    private sealed class ConfigOptions(Dictionary<string, string> values) : AnalyzerConfigOptions
+    {
+        public override bool TryGetValue(string key, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? value) =>
+            values.TryGetValue(key, out value);
     }
 }

@@ -188,6 +188,20 @@ _ = DeleteUser(id);           // fine, ignored on purpose
 It also catches a lambda that drops one, such as `items.ForEach(item => Save(item))`. To make it an
 error, or to turn it off, set `dotnet_diagnostic.BR0001.severity` in `.editorconfig`.
 
+Some calls only look like they return a result. A mock verification such as NSubstitute's
+`await repository.Received(1).SaveAsync(user)` checks that a call was made, and the result it returns
+is a stand in that means nothing. Name the methods whose return value is such a receiver, and calls
+made on it are left alone:
+
+```ini
+[tests/**.cs]
+dotnet_code_quality.BR0001.ignored_receiver_methods = Received, DidNotReceive, ReceivedWithAnyArgs, DidNotReceiveWithAnyArgs
+```
+
+The names are matched against the method that returns the receiver, whatever its type, and only the
+call made directly on it is skipped: `repository.Received().Save().Map(...)` still warns for `Map`.
+Nothing is ignored unless you name it.
+
 ### Operations without a return value
 
 Deleting a record or sending an email either works or fails, but has nothing to return. Use
